@@ -6,8 +6,10 @@ import (
 	"strings"
 )
 
-var input = "x ^ 2 + 2 * x * z + z ^ 2 + z + 1"
-var roots_input = "x = 1 z = 2" //эти две переменные мы получаем с сайта
+// var input = "x ^ 2 + 2 * x * z + z ^ 2 + z + 1"
+var input = "x ^ 3 + x + 5"
+var roots_input = "x = 3 y = 35" //эти две переменные мы получаем с сайта
+//var roots_input = "x = 1 z = 2" //эти две переменные мы получаем с сайта
 
 var mapOfRoots = make(map[string]int) //обработанные значения корней в виде key = value
 var evaluationInput string            // строка функции с подставленными private and public inputs
@@ -120,8 +122,15 @@ func binaryTree(rpn string) (res int) { //Здесь нужно изменить
 					str = append(str[:i], str[i+2:]...)
 					i = -1
 				case "^":
-					num := num1 * num2
-					constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
+					numTemp := num1
+					num := num1
+
+					for j := num2; j > 1; j-- {
+						num = numTemp * num1
+						constraintsSaver(strconv.Itoa(numTemp), "*", str[i], strconv.Itoa(num))
+						numTemp = num
+					}
+					//constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
 					str[i+2] = strconv.Itoa(num)
 					str = append(str[:i], str[i+2:]...)
 					i = -1
@@ -159,7 +168,16 @@ func evalInput(function string) { // записывает функцию уже 
 	evaluationInput = strings.Join(strFunc, " ")
 }
 
-func witnessGen() {
+func witnesInit() {
+	witnes = append(witnes, 1)
+	for _, val := range mapOfRoots {
+
+		witnes = append(witnes, val)
+	}
+	witnessAdd()
+}
+
+func witnessAdd() {
 	for i := 0; i < len(constraints); i++ {
 		if (i+1)%4 == 0 {
 			temp, _ := strconv.Atoi(constraints[i])
@@ -183,7 +201,8 @@ func main() {
 	*/
 
 	fmt.Println(constraints)
-	witnessGen()
+	witnesInit()
+	//witnessAdd()
 	fmt.Println(witnes)
 
 }
