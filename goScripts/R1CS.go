@@ -15,6 +15,7 @@ var mapOfRoots = make(map[string]int) //обработанные значени�
 var evaluationInput string            // строка функции с подставленными private and public inputs
 
 var constraints []string
+var constraintsFormall []string
 
 var witnes []int
 
@@ -84,19 +85,61 @@ func parseInfix(e string) (rpn string) { //попробовать свою ре�
 	return
 }
 
-func constraintsSaver(lftInput string, operation string, rghtInput string, output string) { //constraints evaluation way
-	if operation == "^" { // приводим к виду только сумм и произведения
-		rghtInput = lftInput
-		operation = "*"
-	}
-	constraints = append(constraints, lftInput) // помещаем поочередно
-	constraints = append(constraints, operation)
+// constraints evaluation way: true for evaluation form(with roots), false for formal view
+func constraintsSaver(lftInput string, operation string, rghtInput string, output string, types bool) {
+	switch types {
+	case true:
+		if operation == "^" { // приводим к виду только сумм и произведения
+			rghtInput = lftInput
+			operation = "*"
+		}
+		constraints = append(constraints, lftInput) // помещаем поочередно
+		constraints = append(constraints, operation)
 
-	constraints = append(constraints, rghtInput)
-	constraints = append(constraints, output)
+		constraints = append(constraints, rghtInput)
+		constraints = append(constraints, output)
+
+	case false:
+		if operation == "^" { // приводим к виду только сумм и произведения
+			rghtInput = lftInput
+			operation = "*"
+		}
+		constraintsFormall = append(constraintsFormall, lftInput) // помещаем поочередно
+		constraintsFormall = append(constraintsFormall, operation)
+
+		constraintsFormall = append(constraintsFormall, rghtInput)
+		constraintsFormall = append(constraintsFormall, output)
+	}
+
 }
 
-func binaryTree(rpn string) (res int) { //Здесь нужно изменить под contsraints (функция просто считает результат)
+// Create a constraints with their "way" in formal form
+func constraintsFormalForm(rpn string) {
+	str := strings.Split(rpn, " ")
+	a := oper
+	numCon := 1
+	var constrNum = []string{"Con", ""}
+
+	for i := 0; i < len(str); i++ {
+
+		for key := range a {
+			if str[i] == key {
+				constrNum[1] = strconv.Itoa(numCon)
+				constraintsSaver(str[i-2], str[i], str[i-1], strings.Join(constrNum, ""), false)
+				numCon = numCon + 1
+				str[i] = strings.Join(constrNum, "")
+				str = append(str[:i-2], str[i:]...)
+				i = -1
+				break
+			}
+		}
+
+	}
+
+}
+
+// Create a constraint with their "way" in evaluate form
+func constraintsEval(rpn string) (res int) {
 	str := strings.Split(rpn, " ")
 	//str = append(str, "s")
 	//	var flag bool //0 означает уровень остается, 1 - перехд на уровень выше
@@ -111,13 +154,13 @@ func binaryTree(rpn string) (res int) { //Здесь нужно изменить
 				switch str[i+2] {
 				case "+":
 					num := num1 + num2
-					constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
+					constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num), true)
 					str[i+2] = strconv.Itoa(num)
 					str = append(str[:i], str[i+2:]...)
 					i = -1
 				case "*":
 					num := num1 * num2
-					constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
+					constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num), true)
 					str[i+2] = strconv.Itoa(num)
 					str = append(str[:i], str[i+2:]...)
 					i = -1
@@ -127,7 +170,7 @@ func binaryTree(rpn string) (res int) { //Здесь нужно изменить
 
 					for j := num2; j > 1; j-- {
 						num = numTemp * num1
-						constraintsSaver(strconv.Itoa(numTemp), "*", str[i], strconv.Itoa(num))
+						constraintsSaver(strconv.Itoa(numTemp), "*", str[i], strconv.Itoa(num), true)
 						numTemp = num
 					}
 					//constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
@@ -143,7 +186,8 @@ func binaryTree(rpn string) (res int) { //Здесь нужно изменить
 	// }
 }
 
-func rootsMap(roots string) { // обрабатывает private и public inputs
+// вытаскивает private и public inputs из programm input
+func rootsMap(roots string) {
 	strRoots := strings.Split(roots, " ")
 
 	for i := 0; i < len(strRoots); i++ {
@@ -156,7 +200,8 @@ func rootsMap(roots string) { // обрабатывает private и public inpu
 
 }
 
-func evalInput(function string) { // записывает функцию уже с корнями
+// записывает функцию уже с подставленными корнями
+func evalInput(function string) {
 	strFunc := strings.Split(function, " ")
 	for i := 0; i < len(strFunc); i++ {
 		_, ok := mapOfRoots[strFunc[i]]
@@ -168,6 +213,7 @@ func evalInput(function string) { // записывает функцию уже 
 	evaluationInput = strings.Join(strFunc, " ")
 }
 
+// генерирует witness
 func witnesInit() {
 	witnes = append(witnes, 1)
 	for _, val := range mapOfRoots {
@@ -175,8 +221,15 @@ func witnesInit() {
 		witnes = append(witnes, val)
 	}
 	witnessAdd()
+	formalWitness()
 }
 
+// создает формальный вид witness
+func formalWitness() {
+
+}
+
+// записывает constraint`s output witnes
 func witnessAdd() {
 	for i := 0; i < len(constraints); i++ {
 		if (i+1)%4 == 0 {
@@ -189,10 +242,22 @@ func witnessAdd() {
 func main() {
 	rootsMap(roots_input)
 	evalInput(input)
-	fmt.Println("infix:  ", evaluationInput)
-	parseInfix(evaluationInput)
+	//fmt.Println("infix:  ", evaluationInput)
+	//parseInfix(evaluationInput)
 	fmt.Println("postfix:", parseInfix(evaluationInput))
-	fmt.Println("res:", binaryTree(parseInfix(evaluationInput)))
+	//fmt.Println("infix:  ", input)
+	fmt.Println("postfix:", parseInfix(input))
+
+	//fmt.Println("res:", circuitEval(parseInfix(input)))
+	//fmt.Println("res:", circuitEval(parseInfix(input)))
+	constraintsFormalForm(parseInfix(input))
+	fmt.Println(constraintsFormall)
+
+	fmt.Println("Evaluation input\n " + evaluationInput)
+	constraintsEval(parseInfix(evaluationInput))
+	fmt.Println(constraints)
+
+	witnesInit()
 	/*
 		fmt.Print("a")
 		fmt.Println("infix:  ", input)
@@ -200,8 +265,6 @@ func main() {
 		fmt.Println("res:", binaryTree(parseInfix(input)))
 	*/
 
-	fmt.Println(constraints)
-	witnesInit()
 	//witnessAdd()
 	fmt.Println(witnes)
 
