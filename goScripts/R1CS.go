@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-// var input = "x ^ 2 + 2 * x * z + z ^ 2 + z + 1"
+//var input = "x ^ 2 + 2 * x * z + z ^ 2 + z + 1"
+
 var input = "x ^ 3 + x + 5"
 var roots_input = "x = 3 y = 35" //эти две переменные мы получаем с сайта
 //var roots_input = "x = 1 z = 2" //эти две переменные мы получаем с сайта
@@ -14,10 +15,17 @@ var roots_input = "x = 3 y = 35" //эти две переменные мы по�
 var mapOfRoots = make(map[string]int) //обработанные значения корней в виде key = value
 var evaluationInput string            // строка функции с подставленными private and public inputs
 
-var constraints []string
-var constraintsFormall []string
+var constraints []string        //constraints в численной форме
+var constraintsFormall []string //constraints в буквенной форме
 
-var witnes []int
+var witnes []int          //witness в численной форме
+var witnesFormal []string //witness в буквенной форме
+
+var vectorsA [][]int
+var vectorsB [][]int
+var vectorsC [][]int
+
+//var zeroOneVector [][]int // хранит R1CS веткора (0,0,0,1,0,0)...
 
 /*
 	type Circuit struct {
@@ -116,20 +124,45 @@ func constraintsSaver(lftInput string, operation string, rghtInput string, outpu
 // Create a constraints with their "way" in formal form
 func constraintsFormalForm(rpn string) {
 	str := strings.Split(rpn, " ")
-	a := oper
-	numCon := 1
+	a := oper   //нужно для проверки операторов
+	numCon := 1 //счетчик номера constraint
 	var constrNum = []string{"Con", ""}
 
 	for i := 0; i < len(str); i++ {
 
 		for key := range a {
-			if str[i] == key {
+			constrNum[1] = strconv.Itoa(numCon)
+
+			if str[i] == key && key == "^" {
+				first := str[i-2]
+				second := first
+				num, _ := strconv.Atoi(str[i-1])
+
+				for j := num; j > 1; j-- {
+					//num = numTemp * num1
+					constraintsSaver(first, "*", second, strings.Join(constrNum, ""), false)
+					//numTemp = num
+					numCon = numCon + 1
+					first = strings.Join(constrNum, "")
+					constrNum[1] = strconv.Itoa(numCon)
+				}
+				//constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
+				//str[i+2] = strconv.Itoa(num)
+				numCon = numCon - 1
+				constrNum[1] = strconv.Itoa(numCon)
+
+				str[i] = strings.Join(constrNum, "")
+				str = append(str[:i-2], str[i:]...)
+				numCon = numCon + 1
+				i = 0
+
+			} else if str[i] == key {
 				constrNum[1] = strconv.Itoa(numCon)
 				constraintsSaver(str[i-2], str[i], str[i-1], strings.Join(constrNum, ""), false)
 				numCon = numCon + 1
 				str[i] = strings.Join(constrNum, "")
 				str = append(str[:i-2], str[i:]...)
-				i = -1
+				i = 0
 				break
 			}
 		}
@@ -216,17 +249,25 @@ func evalInput(function string) {
 // генерирует witness
 func witnesInit() {
 	witnes = append(witnes, 1)
-	for _, val := range mapOfRoots {
+	witnesFormal = append(witnesFormal, strconv.Itoa(1))
+	for key, val := range mapOfRoots {
 
+		witnesFormal = append(witnesFormal, key)
 		witnes = append(witnes, val)
 	}
+
 	witnessAdd()
 	formalWitness()
 }
 
 // создает формальный вид witness
 func formalWitness() {
-
+	for i := 0; i < len(constraintsFormall); i++ {
+		if (i+1)%4 == 0 {
+			//temp, _ := strconv.Atoi(constraints[i])
+			witnesFormal = append(witnesFormal, constraintsFormall[i])
+		}
+	}
 }
 
 // записывает constraint`s output witnes
@@ -239,7 +280,118 @@ func witnessAdd() {
 	}
 }
 
+func zeroOneVectorFulling() (zeroOneVector [][]int) {
+	zeroOneVector = make([][]int, len(constraintsFormall)/4)
+	for i := range zeroOneVector {
+		zeroOneVector[i] = make([]int, len(witnes))
+	}
+	return zeroOneVector
+}
+
+func operatorsPipe(operator string) { //взависимоти от оператора a*b-c выбирает для какого из них нжно заполнить вектора
+	switch operator {
+	case "a":
+		R1CSCompilerOperatorA()
+	case "b":
+		R1CSCompilerOperatorB()
+	case "c":
+		R1CSCompilerOperatorC()
+	}
+}
+
+func R1CSCompilerOperatorC() { //тут конкретно много if
+
+	r1csVector := zeroOneVectorFulling()
+	//fmt.Println(r1csVector)
+	counter := 0
+
+	for i := 3; i < len(constraintsFormall); i++ {
+		for j := 0; j < len(witnesFormal); j++ {
+			if constraintsFormall[i] == witnesFormal[j] { //проблема: если констраинт 2*x, а двойки в витнесе нет
+				r1csVector[counter][j] = 1
+				break
+			}
+
+		}
+		i = i + 3
+		counter = counter + 1
+
+	}
+	vectorsC = r1csVector
+
+}
+
+func R1CSCompilerOperatorB() { //тут конкретно много if
+
+	r1csVector := zeroOneVectorFulling()
+	//fmt.Println(r1csVector)
+	counter := 0
+
+	for i := 2; i < len(constraintsFormall); i++ {
+		for j := 0; j < len(witnesFormal); j++ {
+			if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i-1] != "+" { //проблема: если констраинт 2*x, а двойки в витнесе нет
+				r1csVector[counter][j] = 1
+				break
+
+			} else if /*constraintsFormall[i] == witnesFormal[j] &&*/ constraintsFormall[i-1] == "+" {
+				r1csVector[counter][0] = 1
+				break
+			} else if j == len(witnesFormal)-1 {
+				r1csVector[counter][0], _ = strconv.Atoi(constraintsFormall[i])
+				break
+			}
+
+		}
+		i = i + 3
+		counter = counter + 1
+
+	}
+	vectorsB = r1csVector
+
+}
+
+func R1CSCompilerOperatorA() { //тут конкретно много if
+
+	r1csVector := zeroOneVectorFulling()
+	//fmt.Println(r1csVector)
+	counter := 0
+
+	for i := 0; i < len(constraintsFormall); i++ {
+		for j := 0; j < len(witnesFormal); j++ {
+			if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i+1] != "+" {
+				r1csVector[counter][j] = 1
+				break
+
+			} else if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i+1] == "+" {
+
+				//num, _ := strconv.Atoi(constraints[i+2])
+				r1csVector[counter][j] = 1
+				for k := 0; k < len(witnesFormal); k++ {
+					if witnesFormal[k] == constraintsFormall[i+2] {
+						r1csVector[counter][k] = 1
+						break
+					} else if k == len(witnesFormal)-1 {
+
+						r1csVector[counter][0], _ = strconv.Atoi(constraints[i+2])
+					}
+				}
+				//r1csVector[counter][0] = num
+			} else if j == len(witnesFormal)-1 {
+				r1csVector[counter][0], _ = strconv.Atoi(constraintsFormall[i])
+				break
+			}
+
+		}
+		i = i + 3
+		counter = counter + 1
+
+	}
+	vectorsA = r1csVector
+
+}
+
 func main() {
+
 	rootsMap(roots_input)
 	evalInput(input)
 	//fmt.Println("infix:  ", evaluationInput)
@@ -267,5 +419,14 @@ func main() {
 
 	//witnessAdd()
 	fmt.Println(witnes)
+	fmt.Println(witnesFormal)
+	//R1CSCompiler("a")
+	//R1CSCompiler("b")
+	operatorsPipe("a")
+	operatorsPipe("b")
+	operatorsPipe("c")
+	fmt.Println(vectorsA)
+	fmt.Println(vectorsB)
+	fmt.Println(vectorsC)
 
 }
