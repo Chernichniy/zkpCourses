@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-//var input = "x ^ 2 + 2 * x * z + z ^ 2 + z + 1"
+var input = "x ^ 2 + 2 * x * z + z ^ 2 + z + 1"
 
-var input = "x ^ 3 + x + 5"
-var roots_input = "x = 3 y = 35" //эти две переменные мы получаем с сайта
-//var roots_input = "x = 1 z = 2" //эти две переменные мы получаем с сайта
+// var input = "x ^ 3 + x + 5"
+// var roots_input = "x = 3 y = 35" //эти две переменные мы получаем с сайта
+var roots_input = "x = 1 z = 2" //эти две переменные мы получаем с сайта
 
 var mapOfRoots = make(map[string]int) //обработанные значения корней в виде key = value
 var evaluationInput string            // строка функции с подставленными private and public inputs
@@ -24,6 +24,9 @@ var witnesFormal []string //witness в буквенной форме
 var vectorsA [][]int
 var vectorsB [][]int
 var vectorsC [][]int
+
+var witnesFromalChecker []string
+var witnesChecker []string
 
 //var zeroOneVector [][]int // хранит R1CS веткора (0,0,0,1,0,0)...
 
@@ -45,6 +48,7 @@ var oper = map[string]struct {
 	"-": {2, false},
 }
 
+// переводит из инфиксного вида записи функции в постфиксный
 func parseInfix(e string) (rpn string) { //попробовать свою реализацию сддеалть https://github.com/codefreezr/rosettacode-to-go/blob/df006db732e5/tasks/Parsing-Shunting-yard-algorithm/parsing-shunting-yard-algorithm.go
 	var stack []string // holds operators and left parenthesis
 	for _, tok := range strings.Fields(e) {
@@ -280,6 +284,7 @@ func witnessAdd() {
 	}
 }
 
+// создает нулевой двумерный срез для хранения векторов (1,0,0,0,1)...
 func zeroOneVectorFulling() (zeroOneVector [][]int) {
 	zeroOneVector = make([][]int, len(constraintsFormall)/4)
 	for i := range zeroOneVector {
@@ -288,7 +293,8 @@ func zeroOneVectorFulling() (zeroOneVector [][]int) {
 	return zeroOneVector
 }
 
-func operatorsPipe(operator string) { //взависимоти от оператора a*b-c выбирает для какого из них нжно заполнить вектора
+// распределяет какую функцию вызывать в зависимости от оператора  a*b-c=0 для заполнения двумерного среза
+func operatorsPipe(operator string) {
 	switch operator {
 	case "a":
 		R1CSCompilerOperatorA()
@@ -299,6 +305,7 @@ func operatorsPipe(operator string) { //взависимоти от операт
 	}
 }
 
+// заполняет дмуерный срез для оператора c
 func R1CSCompilerOperatorC() { //тут конкретно много if
 
 	r1csVector := zeroOneVectorFulling()
@@ -321,6 +328,7 @@ func R1CSCompilerOperatorC() { //тут конкретно много if
 
 }
 
+// заполняет дмуерный срез для оператора b
 func R1CSCompilerOperatorB() { //тут конкретно много if
 
 	r1csVector := zeroOneVectorFulling()
@@ -350,6 +358,7 @@ func R1CSCompilerOperatorB() { //тут конкретно много if
 
 }
 
+// заполняет дмуерный срез для оператора a
 func R1CSCompilerOperatorA() { //тут конкретно много if
 
 	r1csVector := zeroOneVectorFulling()
@@ -376,7 +385,8 @@ func R1CSCompilerOperatorA() { //тут конкретно много if
 					}
 				}
 				//r1csVector[counter][0] = num
-			} else if j == len(witnesFormal)-1 {
+
+			} else if j == len(witnesFormal)-1 && r1csVector[counter][0] == 0 {
 				r1csVector[counter][0], _ = strconv.Atoi(constraintsFormall[i])
 				break
 			}
@@ -386,7 +396,92 @@ func R1CSCompilerOperatorA() { //тут конкретно много if
 		counter = counter + 1
 
 	}
+
 	vectorsA = r1csVector
+
+}
+
+// сохраняет значения индексов, в которых находятся ненулевые значения двумерного среза
+func witnessReprIndexes(vectors [][]int) (indexes [][]int) {
+
+	indexes = make([][]int, len(vectors))
+	for i := range indexes {
+		indexes[i] = make([]int, 3)
+	}
+
+	k := 0
+	for i := 0; i < len(vectors); i++ {
+		for j := 0; j < len(vectors[i]); j++ {
+			if vectors[i][j] == 1 {
+				indexes[i][k] = j
+				k = k + 1
+			} else if vectors[i][j] > 1 {
+				indexes[i][k] = j
+				indexes[i][2] = vectors[i][j]
+				k = k + 1
+			}
+		}
+		indexes[i][2] = vectors[i][0]
+		k = 0
+	}
+	return indexes
+}
+
+// выводит witness построенный на основе двумерного среза в формальном виде. Служит для проверки правильности вычеслений
+func witnessReprCheckerFormal() {
+	a := witnessReprIndexes(vectorsA)
+	b := witnessReprIndexes(vectorsB)
+	c := witnessReprIndexes(vectorsC)
+
+	fmt.Println(len(a))
+	for i := 0; i < len(a); i++ {
+		counter := 0
+		for j := 0; j < len(a[i]); j++ {
+			if a[i][j] >= 1 {
+				counter = counter + 1
+			}
+		}
+		if a[i][0] >= 0 && a[i][2] > 0 && counter > 1 {
+			witnesFromalChecker = append(witnesFromalChecker, "("+witnesFormal[a[i][1]]+"+"+strconv.Itoa(a[i][2])+")"+"*"+witnesFormal[b[i][0]]+"="+witnesFormal[c[i][0]])
+
+		} else if a[i][0] > 0 && a[i][1] > 0 {
+			witnesFromalChecker = append(witnesFromalChecker, "("+witnesFormal[a[i][0]]+"+"+witnesFormal[a[i][1]]+")"+"*"+witnesFormal[b[i][0]]+"="+witnesFormal[c[i][0]])
+
+		} else if a[i][2] >= 1 && counter == 1 {
+			witnesFromalChecker = append(witnesFromalChecker, strconv.Itoa(a[i][2])+"*"+witnesFormal[b[i][0]]+"="+witnesFormal[c[i][0]])
+		} else {
+			witnesFromalChecker = append(witnesFromalChecker, witnesFormal[a[i][0]]+"*"+witnesFormal[b[i][0]]+"="+witnesFormal[c[i][0]])
+		}
+	}
+
+}
+
+// выводит witness построенный на основе двумерного среза в числовом виде. Служит для проверки правильности вычеслений
+func witnessReprChecker() {
+	a := witnessReprIndexes(vectorsA)
+	b := witnessReprIndexes(vectorsB)
+	c := witnessReprIndexes(vectorsC)
+
+	fmt.Println(len(a))
+	for i := 0; i < len(a); i++ {
+		counter := 0
+		for j := 0; j < len(a[i]); j++ {
+			if a[i][j] >= 1 {
+				counter = counter + 1
+			}
+		}
+		if a[i][0] >= 0 && a[i][2] > 0 && counter > 1 {
+			witnesChecker = append(witnesChecker, "("+strconv.Itoa(witnes[a[i][1]])+"+"+strconv.Itoa(a[i][2])+")"+"*"+strconv.Itoa(witnes[b[i][0]])+"="+strconv.Itoa(witnes[c[i][0]]))
+
+		} else if a[i][0] > 0 && a[i][1] > 0 {
+			witnesChecker = append(witnesChecker, "("+strconv.Itoa(witnes[a[i][0]])+"+"+strconv.Itoa(witnes[a[i][1]])+")"+"*"+strconv.Itoa(witnes[b[i][0]])+"="+strconv.Itoa(witnes[c[i][0]]))
+
+		} else if a[i][2] >= 1 && counter == 1 {
+			witnesChecker = append(witnesChecker, strconv.Itoa(a[i][2])+"*"+strconv.Itoa(witnes[b[i][0]])+"="+strconv.Itoa(witnes[c[i][0]]))
+		} else {
+			witnesChecker = append(witnesChecker, strconv.Itoa(witnes[a[i][0]])+"*"+strconv.Itoa(witnes[b[i][0]])+"="+strconv.Itoa(witnes[c[i][0]]))
+		}
+	}
 
 }
 
@@ -396,18 +491,18 @@ func main() {
 	evalInput(input)
 	//fmt.Println("infix:  ", evaluationInput)
 	//parseInfix(evaluationInput)
-	fmt.Println("postfix:", parseInfix(evaluationInput))
+	//fmt.Println("postfix:", parseInfix(evaluationInput))
 	//fmt.Println("infix:  ", input)
-	fmt.Println("postfix:", parseInfix(input))
+	//fmt.Println("postfix:", parseInfix(input))
 
 	//fmt.Println("res:", circuitEval(parseInfix(input)))
 	//fmt.Println("res:", circuitEval(parseInfix(input)))
 	constraintsFormalForm(parseInfix(input))
-	fmt.Println(constraintsFormall)
+	//fmt.Println(constraintsFormall)
 
-	fmt.Println("Evaluation input\n " + evaluationInput)
+	//fmt.Println("Evaluation input\n " + evaluationInput)
 	constraintsEval(parseInfix(evaluationInput))
-	fmt.Println(constraints)
+	//fmt.Println(constraints)
 
 	witnesInit()
 	/*
@@ -418,15 +513,28 @@ func main() {
 	*/
 
 	//witnessAdd()
+	fmt.Println("Witness in numers representation: ")
 	fmt.Println(witnes)
+	fmt.Println("Witness in formal representation: ")
 	fmt.Println(witnesFormal)
-	//R1CSCompiler("a")
-	//R1CSCompiler("b")
+
 	operatorsPipe("a")
 	operatorsPipe("b")
 	operatorsPipe("c")
+	fmt.Println("R1CS matrix of values a: ")
 	fmt.Println(vectorsA)
+	fmt.Println("R1CS matrix of values b: ")
 	fmt.Println(vectorsB)
+	fmt.Println("R1CS matrix of values c: ")
 	fmt.Println(vectorsC)
+
+	//fmt.Print(len(vectorsA))
+	witnessReprCheckerFormal()
+	fmt.Println("Checker of satisfaction of R1CS conditions wich calculate by R1CS matrices (formal representation): ")
+	fmt.Println(witnesFromalChecker)
+
+	witnessReprChecker()
+	fmt.Println("Checker of satisfaction of R1CS conditions wich calculate by R1CS matrices (numbers representation): ")
+	fmt.Println(witnesChecker)
 
 }
