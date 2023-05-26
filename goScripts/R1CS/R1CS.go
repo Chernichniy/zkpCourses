@@ -1,4 +1,4 @@
-package main
+package r1cs
 
 import (
 	"fmt"
@@ -442,15 +442,15 @@ func witnessReprCheckerFormal() {
 			}
 		}
 		if a[i][0] >= 0 && a[i][2] > 0 && counter > 1 {
-			witnesFromalChecker = append(witnesFromalChecker, "("+witnesFormal[a[i][1]]+"+"+strconv.Itoa(a[i][2])+")"+"*"+witnesFormal[b[i][0]]+"="+witnesFormal[c[i][0]])
+			witnesFromalChecker = append(witnesFromalChecker, "("+witnesFormal[a[i][1]]+"+"+strconv.Itoa(a[i][2])+")"+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
 
 		} else if a[i][0] > 0 && a[i][1] > 0 {
-			witnesFromalChecker = append(witnesFromalChecker, "("+witnesFormal[a[i][0]]+"+"+witnesFormal[a[i][1]]+")"+"*"+witnesFormal[b[i][0]]+"="+witnesFormal[c[i][0]])
+			witnesFromalChecker = append(witnesFromalChecker, "("+witnesFormal[a[i][0]]+"+"+witnesFormal[a[i][1]]+")"+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
 
 		} else if a[i][2] >= 1 && counter == 1 {
-			witnesFromalChecker = append(witnesFromalChecker, strconv.Itoa(a[i][2])+"*"+witnesFormal[b[i][0]]+"="+witnesFormal[c[i][0]])
+			witnesFromalChecker = append(witnesFromalChecker, strconv.Itoa(a[i][2])+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
 		} else {
-			witnesFromalChecker = append(witnesFromalChecker, witnesFormal[a[i][0]]+"*"+witnesFormal[b[i][0]]+"="+witnesFormal[c[i][0]])
+			witnesFromalChecker = append(witnesFromalChecker, witnesFormal[a[i][0]]+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
 		}
 	}
 
@@ -471,15 +471,15 @@ func witnessReprChecker() {
 			}
 		}
 		if a[i][0] >= 0 && a[i][2] > 0 && counter > 1 {
-			witnesChecker = append(witnesChecker, "("+strconv.Itoa(witnes[a[i][1]])+"+"+strconv.Itoa(a[i][2])+")"+"*"+strconv.Itoa(witnes[b[i][0]])+"="+strconv.Itoa(witnes[c[i][0]]))
+			witnesChecker = append(witnesChecker, "("+strconv.Itoa(witnes[a[i][1]])+"+"+strconv.Itoa(a[i][2])+")"+"*"+strconv.Itoa(witnes[b[i][0]])+"-"+strconv.Itoa(witnes[c[i][0]]))
 
 		} else if a[i][0] > 0 && a[i][1] > 0 {
-			witnesChecker = append(witnesChecker, "("+strconv.Itoa(witnes[a[i][0]])+"+"+strconv.Itoa(witnes[a[i][1]])+")"+"*"+strconv.Itoa(witnes[b[i][0]])+"="+strconv.Itoa(witnes[c[i][0]]))
+			witnesChecker = append(witnesChecker, "("+strconv.Itoa(witnes[a[i][0]])+"+"+strconv.Itoa(witnes[a[i][1]])+")"+"*"+strconv.Itoa(witnes[b[i][0]])+"-"+strconv.Itoa(witnes[c[i][0]]))
 
 		} else if a[i][2] >= 1 && counter == 1 {
-			witnesChecker = append(witnesChecker, strconv.Itoa(a[i][2])+"*"+strconv.Itoa(witnes[b[i][0]])+"="+strconv.Itoa(witnes[c[i][0]]))
+			witnesChecker = append(witnesChecker, strconv.Itoa(a[i][2])+"*"+strconv.Itoa(witnes[b[i][0]])+"-"+strconv.Itoa(witnes[c[i][0]]))
 		} else {
-			witnesChecker = append(witnesChecker, strconv.Itoa(witnes[a[i][0]])+"*"+strconv.Itoa(witnes[b[i][0]])+"="+strconv.Itoa(witnes[c[i][0]]))
+			witnesChecker = append(witnesChecker, strconv.Itoa(witnes[a[i][0]])+"*"+strconv.Itoa(witnes[b[i][0]])+"-"+strconv.Itoa(witnes[c[i][0]]))
 		}
 	}
 
