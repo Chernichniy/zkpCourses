@@ -485,7 +485,7 @@ func witnessReprChecker() {
 
 }
 
-func main() {
+func mainR() {
 
 	rootsMap(roots_input)
 	evalInput(input)
