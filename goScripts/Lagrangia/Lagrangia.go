@@ -1,6 +1,6 @@
 // TO DO
 // Сделать проверку этих полиномов (в файле R1CS) постфиксный вид и рассчет
-package main
+package Lagrangia
 
 import (
 	"fmt"
