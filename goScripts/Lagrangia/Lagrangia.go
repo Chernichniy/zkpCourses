@@ -300,7 +300,7 @@ func printLagrangiaBasis() {
 	fmt.Println("\n")
 }
 
-func main() {
+func Start() {
 	rootsMapLag(inputLag)
 
 	polynomialByOnePoint(mapOfRootsLag)
