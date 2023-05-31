@@ -1,4 +1,4 @@
-package main
+package QAP
 
 import (
 	"github.com/Chernichniy/zkpCourses/goScripts/Lagrangia"
@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
-	r1cs.Start("x ^ 2 + 2 * x * z + z ^ 2 + z + 1")
-	Lagrangia.Start("x = 3 x2 = 1 x3 = 2 y = 5 y2 = 7 y3 = 3")
+	r1cs.Start()
+
+	Lagrangia.Start()
 }
