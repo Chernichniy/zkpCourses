@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var inputLag = "x = 3 x2 = 1 x3 = 2 y = 5 y2 = 7 y3 = 3"
+var inputLag string
 var mapOfRootsLag = make(map[string]int) //map корней и знчений функций
 
 var mapOfPolynomials = make(map[string]string) //полиномы для одной точки
@@ -300,7 +300,7 @@ func printLagrangiaBasis() {
 	fmt.Println("\n")
 }
 
-func Start() {
+func Start(inputLag string) {
 	rootsMapLag(inputLag)
 
 	polynomialByOnePoint(mapOfRootsLag)

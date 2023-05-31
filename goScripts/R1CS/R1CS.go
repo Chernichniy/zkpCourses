@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var input = "x ^ 2 + 2 * x * z + z ^ 2 + z + 1"
+var input string
 
 // var input = "x ^ 3 + x + 5"
 // var roots_input = "x = 3 y = 35" //эти две переменные мы получаем с сайта
@@ -485,7 +485,7 @@ func witnessReprChecker() {
 
 }
 
-func Start() {
+func Start(input string) {
 
 	rootsMap(roots_input)
 	evalInput(input)
