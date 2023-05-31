@@ -7,10 +7,11 @@ import (
 )
 
 var input string
+var roots_input string
 
 // var input = "x ^ 3 + x + 5"
 // var roots_input = "x = 3 y = 35" //эти две переменные мы получаем с сайта
-var roots_input = "x = 1 z = 2" //эти две переменные мы получаем с сайта
+//var roots_input = "x = 1 z = 2" //эти две переменные мы получаем с сайта
 
 var mapOfRoots = make(map[string]int) //обработанные значения корней в виде key = value
 var evaluationInput string            // строка функции с подставленными private and public inputs
@@ -25,18 +26,9 @@ var vectorsA [][]int
 var vectorsB [][]int
 var vectorsC [][]int
 
-var witnesFromalChecker []string
+var witnesFormalChecker []string
 var witnesChecker []string
 
-//var zeroOneVector [][]int // хранит R1CS веткора (0,0,0,1,0,0)...
-
-/*
-	type Circuit struct {
-		m int //number of inputs
-		n int //number of gates
-
-}
-*/
 var oper = map[string]struct {
 	prec   int
 	rAssoc bool
@@ -49,7 +41,7 @@ var oper = map[string]struct {
 }
 
 // переводит из инфиксного вида записи функции в постфиксный
-func parseInfix(e string) (rpn string) { //попробовать свою реализацию сддеалть https://github.com/codefreezr/rosettacode-to-go/blob/df006db732e5/tasks/Parsing-Shunting-yard-algorithm/parsing-shunting-yard-algorithm.go
+func ParseInfix(e string) (rpn string) { //попробовать свою реализацию сддеалть https://github.com/codefreezr/rosettacode-to-go/blob/df006db732e5/tasks/Parsing-Shunting-yard-algorithm/parsing-shunting-yard-algorithm.go
 	var stack []string // holds operators and left parenthesis
 	for _, tok := range strings.Fields(e) {
 		switch tok {
@@ -297,16 +289,16 @@ func zeroOneVectorFulling() (zeroOneVector [][]int) {
 func operatorsPipe(operator string) {
 	switch operator {
 	case "a":
-		R1CSCompilerOperatorA()
+		r1CSCompilerOperatorA()
 	case "b":
-		R1CSCompilerOperatorB()
+		r1CSCompilerOperatorB()
 	case "c":
-		R1CSCompilerOperatorC()
+		r1CSCompilerOperatorC()
 	}
 }
 
 // заполняет дмуерный срез для оператора c
-func R1CSCompilerOperatorC() { //тут конкретно много if
+func r1CSCompilerOperatorC() { //тут конкретно много if
 
 	r1csVector := zeroOneVectorFulling()
 	//fmt.Println(r1csVector)
@@ -329,7 +321,7 @@ func R1CSCompilerOperatorC() { //тут конкретно много if
 }
 
 // заполняет дмуерный срез для оператора b
-func R1CSCompilerOperatorB() { //тут конкретно много if
+func r1CSCompilerOperatorB() { //тут конкретно много if
 
 	r1csVector := zeroOneVectorFulling()
 	//fmt.Println(r1csVector)
@@ -359,7 +351,7 @@ func R1CSCompilerOperatorB() { //тут конкретно много if
 }
 
 // заполняет дмуерный срез для оператора a
-func R1CSCompilerOperatorA() { //тут конкретно много if
+func r1CSCompilerOperatorA() { //тут конкретно много if
 
 	r1csVector := zeroOneVectorFulling()
 	//fmt.Println(r1csVector)
@@ -373,7 +365,6 @@ func R1CSCompilerOperatorA() { //тут конкретно много if
 
 			} else if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i+1] == "+" {
 
-				//num, _ := strconv.Atoi(constraints[i+2])
 				r1csVector[counter][j] = 1
 				for k := 0; k < len(witnesFormal); k++ {
 					if witnesFormal[k] == constraintsFormall[i+2] {
@@ -384,7 +375,6 @@ func R1CSCompilerOperatorA() { //тут конкретно много if
 						r1csVector[counter][0], _ = strconv.Atoi(constraints[i+2])
 					}
 				}
-				//r1csVector[counter][0] = num
 
 			} else if j == len(witnesFormal)-1 && r1csVector[counter][0] == 0 {
 				r1csVector[counter][0], _ = strconv.Atoi(constraintsFormall[i])
@@ -442,15 +432,15 @@ func witnessReprCheckerFormal() {
 			}
 		}
 		if a[i][0] >= 0 && a[i][2] > 0 && counter > 1 {
-			witnesFromalChecker = append(witnesFromalChecker, "("+witnesFormal[a[i][1]]+"+"+strconv.Itoa(a[i][2])+")"+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
+			witnesFormalChecker = append(witnesFormalChecker, "("+witnesFormal[a[i][1]]+"+"+strconv.Itoa(a[i][2])+")"+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
 
 		} else if a[i][0] > 0 && a[i][1] > 0 {
-			witnesFromalChecker = append(witnesFromalChecker, "("+witnesFormal[a[i][0]]+"+"+witnesFormal[a[i][1]]+")"+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
+			witnesFormalChecker = append(witnesFormalChecker, "("+witnesFormal[a[i][0]]+"+"+witnesFormal[a[i][1]]+")"+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
 
 		} else if a[i][2] >= 1 && counter == 1 {
-			witnesFromalChecker = append(witnesFromalChecker, strconv.Itoa(a[i][2])+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
+			witnesFormalChecker = append(witnesFormalChecker, strconv.Itoa(a[i][2])+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
 		} else {
-			witnesFromalChecker = append(witnesFromalChecker, witnesFormal[a[i][0]]+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
+			witnesFormalChecker = append(witnesFormalChecker, witnesFormal[a[i][0]]+"*"+witnesFormal[b[i][0]]+"-"+witnesFormal[c[i][0]])
 		}
 	}
 
@@ -485,34 +475,40 @@ func witnessReprChecker() {
 
 }
 
-func Start(input string) {
+// Даем вектора к другим пакетам
+func ReturnVectorsA() [][]int {
+	return vectorsA
+}
+
+func ReturnVectorsB() [][]int {
+	return vectorsB
+}
+
+func ReturnVectorsC() [][]int {
+	return vectorsC
+}
+
+func ReturnWitnessFormal() []string {
+	return witnesFormal
+}
+
+func ReturnWitnessNumbers() []int {
+	return witnes
+}
+
+func Start(function string, roots string) {
+	input = function
+	roots_input = roots
 
 	rootsMap(roots_input)
 	evalInput(input)
-	//fmt.Println("infix:  ", evaluationInput)
-	//parseInfix(evaluationInput)
-	//fmt.Println("postfix:", parseInfix(evaluationInput))
-	//fmt.Println("infix:  ", input)
-	//fmt.Println("postfix:", parseInfix(input))
 
-	//fmt.Println("res:", circuitEval(parseInfix(input)))
-	//fmt.Println("res:", circuitEval(parseInfix(input)))
-	constraintsFormalForm(parseInfix(input))
-	//fmt.Println(constraintsFormall)
+	constraintsFormalForm(ParseInfix(input))
 
-	//fmt.Println("Evaluation input\n " + evaluationInput)
-	constraintsEval(parseInfix(evaluationInput))
-	//fmt.Println(constraints)
+	constraintsEval(ParseInfix(evaluationInput))
 
 	witnesInit()
-	/*
-		fmt.Print("a")
-		fmt.Println("infix:  ", input)
-		fmt.Println("postfix:", parseInfix(input))
-		fmt.Println("res:", binaryTree(parseInfix(input)))
-	*/
 
-	//witnessAdd()
 	fmt.Println("Witness in numers representation: ")
 	fmt.Println(witnes)
 	fmt.Println("Witness in formal representation: ")
@@ -528,10 +524,9 @@ func Start(input string) {
 	fmt.Println("R1CS matrix of values c: ")
 	fmt.Println(vectorsC)
 
-	//fmt.Print(len(vectorsA))
 	witnessReprCheckerFormal()
 	fmt.Println("Checker of satisfaction of R1CS conditions wich calculate by R1CS matrices (formal representation): ")
-	fmt.Println(witnesFromalChecker)
+	fmt.Println(witnesFormalChecker)
 
 	witnessReprChecker()
 	fmt.Println("Checker of satisfaction of R1CS conditions wich calculate by R1CS matrices (numbers representation): ")
