@@ -2,6 +2,7 @@ package r1cs
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -89,6 +90,125 @@ func ParseInfix(e string) (rpn string) { //попробовать свою ре�
 	return
 }
 
+// Проверяет, действительно ли число, с типом float64 является int-овым числом, тоесть isInt(2,0) == true; isInt(2,1)==false
+func isInt(val float64) bool { //поместить в отдельный пакет
+	return val == float64(int(val))
+}
+
+// Проверяет, является ли значение бесконечностью
+// Используется при делении на 0
+func isFinite(num float64) bool { //поместить в отдельный пакет
+	return !math.IsInf(num, 0) && !math.IsNaN(num)
+}
+
+// Находит индекс, в котором находится знак деления
+// Используется при делении на 0
+func isDel(str []string, index int) int { //поместить в отдельный пакет
+	var res int
+	for i := index; i < len(str); i++ {
+		if str[i] == "/" {
+			res = i
+			break
+		}
+	}
+	return res
+}
+
+// Create a constraint with their "way" in evaluate form and calculate function in ParseInfix !!!Необходимо отделить сохранение ограничений и рассчет функции
+func constraintsEval(rpn string) (res int) { //поместить в отдельный пакет
+	str := strings.Split(rpn, " ")
+
+	for i := 0; i < len(str); i++ {
+		if i+2 <= len(str)-1 {
+			num1, _ := strconv.ParseFloat(str[i], 64)
+			num2, _ := strconv.ParseFloat(str[i+1], 64)
+			num3, _ := strconv.ParseFloat(str[i+2], 64)
+			if num3 == 0 { //нужно перегрузка операторов или что-то типо лямба функции
+
+				switch str[i+2] {
+				case "+":
+					num := num1 + num2
+					if isInt(num) {
+						str[i+2] = strconv.Itoa(int(num))
+					} else {
+						str[i+2] = fmt.Sprintf("%f", num)
+					}
+					constraintsSaver(str[i], str[i+2], str[i+1], str[i+2], true)
+					str = append(str[:i], str[i+2:]...)
+					i = -1
+				case "*":
+					num := num1 * num2
+					if isInt(num) {
+						str[i+2] = strconv.Itoa(int(num))
+					} else {
+						str[i+2] = fmt.Sprintf("%f", num)
+					}
+					constraintsSaver(str[i], str[i+2], str[i+1], str[i+2], true)
+					str = append(str[:i], str[i+2:]...)
+					i = -1
+				case "^":
+					numTemp := num1
+					num := num1
+					var fl bool
+
+					for j := num2; j > 1; j-- {
+						num = numTemp * num1
+						if isInt(num) {
+							constraintsSaver(strconv.Itoa(int(numTemp)), "*", str[i], strconv.Itoa(int(num)), true)
+
+							fl = true
+						} else {
+							constraintsSaver(fmt.Sprintf("%f", numTemp), "*", str[i], fmt.Sprintf("%f", num), true)
+
+							fl = false
+						}
+						numTemp = num
+					}
+					//constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
+					if fl {
+						str[i+2] = strconv.Itoa(int(num))
+					} else {
+						str[i+2] = fmt.Sprintf("%f", num)
+					}
+					//constraintsSaver(strconv.Itoa(numTemp), "*", str[i], strconv.Itoa(num), true)
+					str = append(str[:i], str[i+2:]...)
+					i = -1
+				case "-":
+
+					num := num1 - num2
+
+					if isInt(num) { // проверка инт или флоат
+						str[i+2] = strconv.Itoa(int(num))
+					} else {
+						str[i+2] = fmt.Sprintf("%f", num)
+					}
+					str = append(str[:i], str[i+2:]...)
+					i = -1
+				case "/":
+
+					num := num1 / num2
+					if isFinite(num) == false {
+						num = 0
+					}
+					if isInt(num) {
+						str[i+2] = strconv.Itoa(int(num))
+					} else {
+						//str[i+2] = strconv.FormatFloat(num, 'E', -1, 64)
+						str[i+2] = fmt.Sprintf("%f", num)
+
+					}
+					str = append(str[:i], str[i+2:]...)
+					i = -1
+				}
+
+			}
+		}
+	}
+	res, _ = strconv.Atoi(str[0])
+	return res
+	// }
+}
+
 // constraints evaluation way: true for evaluation form(with roots), false for formal view
 func constraintsSaver(lftInput string, operation string, rghtInput string, output string, types bool) {
 	switch types {
@@ -167,54 +287,6 @@ func constraintsFormalForm(rpn string) {
 
 }
 
-// Create a constraint with their "way" in evaluate form
-func constraintsEval(rpn string) (res int) {
-	str := strings.Split(rpn, " ")
-	//str = append(str, "s")
-	//	var flag bool //0 означает уровень остается, 1 - перехд на уровень выше
-	//for j:= range strings.Fields(rpn){
-	for i := 0; i < len(str); i++ /*range str*/ {
-		if i+2 <= len(str)-1 {
-			num1, _ := strconv.Atoi(str[i])
-			num2, _ := strconv.Atoi(str[i+1])
-			num3, _ := strconv.Atoi(str[i+2])
-			if num3 == 0 { //нужно перегрузка операторов или что-то типо лямба функции
-
-				switch str[i+2] {
-				case "+":
-					num := num1 + num2
-					constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num), true)
-					str[i+2] = strconv.Itoa(num)
-					str = append(str[:i], str[i+2:]...)
-					i = -1
-				case "*":
-					num := num1 * num2
-					constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num), true)
-					str[i+2] = strconv.Itoa(num)
-					str = append(str[:i], str[i+2:]...)
-					i = -1
-				case "^":
-					numTemp := num1
-					num := num1
-
-					for j := num2; j > 1; j-- {
-						num = numTemp * num1
-						constraintsSaver(strconv.Itoa(numTemp), "*", str[i], strconv.Itoa(num), true)
-						numTemp = num
-					}
-					//constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
-					str[i+2] = strconv.Itoa(num)
-					str = append(str[:i], str[i+2:]...)
-					i = -1
-				}
-			}
-		}
-	}
-	res, _ = strconv.Atoi(str[0])
-	return res
-	// }
-}
-
 // вытаскивает private и public inputs из programm input
 func rootsMap(roots string) {
 	strRoots := strings.Split(roots, " ")
@@ -264,6 +336,8 @@ func formalWitness() {
 			witnesFormal = append(witnesFormal, constraintsFormall[i])
 		}
 	}
+
+	//witnesFormal[len(witnesFormal)-1]=
 }
 
 // записывает constraint`s output witnes
@@ -274,13 +348,14 @@ func witnessAdd() {
 			witnes = append(witnes, temp)
 		}
 	}
+
 }
 
 // создает нулевой двумерный срез для хранения векторов (1,0,0,0,1)...
-func zeroOneVectorFulling() (zeroOneVector [][]int) {
+func ZeroOneVectorFulling() (zeroOneVector [][]int) {
 	zeroOneVector = make([][]int, len(constraintsFormall)/4)
 	for i := range zeroOneVector {
-		zeroOneVector[i] = make([]int, len(witnes))
+		zeroOneVector[i] = make([]int, len(witnes)-1)
 	}
 	return zeroOneVector
 }
@@ -300,13 +375,17 @@ func operatorsPipe(operator string) {
 // заполняет дмуерный срез для оператора c
 func r1CSCompilerOperatorC() { //тут конкретно много if
 
-	r1csVector := zeroOneVectorFulling()
+	r1csVector := ZeroOneVectorFulling()
 	//fmt.Println(r1csVector)
 	counter := 0
 
 	for i := 3; i < len(constraintsFormall); i++ {
 		for j := 0; j < len(witnesFormal); j++ {
-			if constraintsFormall[i] == witnesFormal[j] { //проблема: если констраинт 2*x, а двойки в витнесе нет
+			if i == len(constraintsFormall)-1 && constraintsFormall[i] == witnesFormal[j] {
+				r1csVector[counter][2] = 1 // output of function
+				break
+
+			} else if constraintsFormall[i] == witnesFormal[j] {
 				r1csVector[counter][j] = 1
 				break
 			}
@@ -323,7 +402,7 @@ func r1CSCompilerOperatorC() { //тут конкретно много if
 // заполняет дмуерный срез для оператора b
 func r1CSCompilerOperatorB() { //тут конкретно много if
 
-	r1csVector := zeroOneVectorFulling()
+	r1csVector := ZeroOneVectorFulling()
 	//fmt.Println(r1csVector)
 	counter := 0
 
@@ -353,7 +432,7 @@ func r1CSCompilerOperatorB() { //тут конкретно много if
 // заполняет дмуерный срез для оператора a
 func r1CSCompilerOperatorA() { //тут конкретно много if
 
-	r1csVector := zeroOneVectorFulling()
+	r1csVector := ZeroOneVectorFulling()
 	//fmt.Println(r1csVector)
 	counter := 0
 

@@ -18,8 +18,13 @@ var mapOfMultiPolynomials = make(map[string]string) //полиномы, созд
 
 var mapOfLagrangiaBasis = make(map[int]string) //хранит базисы
 
+var mapOfNormalNumerator = make(map[string]string)   //хранит числитель конечного обычного вида
+var mapOfNormalDenumerator = make(map[string]string) //хранит знаменатель конечного обычного вида
+
 var mapOfBarricNumerator = make(map[int]string)   //хранит числитель конечного баррицентричного вида
 var mapOfBarricDenumerator = make(map[int]string) //хранит знаменатель конечного баррицентричного вида
+
+var MultiPolynomialsBarric string
 
 func rootsMapLag(roots string) { // это нужно закинуть в отдеьлный файл
 	strRoots := strings.Split(roots, " ")
@@ -64,7 +69,7 @@ func saveMultPolynomial(xKeys []int, x int, y int, counter int) { //попроб
 
 	tempVal := "( x - "
 
-	tempValStr := strconv.Itoa(y) + " * "
+	tempValStr := "( " + strconv.Itoa(y) + " * "
 
 	for j := 0; j < len(xKeys)-1; j++ {
 		for i := 0; i < len(keysForNumerator); i++ {
@@ -84,8 +89,8 @@ func saveMultPolynomial(xKeys []int, x int, y int, counter int) { //попроб
 			tempValStr = tempValStr + " * "
 		}
 	}
-
-	tempValStr = tempValStr + " / "
+	mapOfNormalNumerator[tempKey] = tempValStr + " )"
+	tempValStr = tempValStr + " )" + " / ( "
 	tempVal = "( " + strconv.Itoa(x) + " - "
 
 	for j := 0; j < len(xKeys)-1; j++ {
@@ -105,7 +110,9 @@ func saveMultPolynomial(xKeys []int, x int, y int, counter int) { //попроб
 			tempValStr = tempValStr + " * "
 		}
 	}
-
+	denum := strings.Split(tempValStr, "/")
+	mapOfNormalDenumerator[tempKey] = denum[1] + " )"
+	tempValStr = tempValStr + " )"
 	mapOfMultiPolynomials[tempKey] = tempValStr
 
 }
@@ -181,7 +188,7 @@ func basisCalc(xKeys []int, x int, y int, counter int) {
 	copy(keysForNumerator, xKeys)
 	copy(keysForDenominator, xKeys)
 
-	tempValStr := "1 / "
+	tempValStr := "1 / ( "
 	tempVal := "( " + strconv.Itoa(x) + " - "
 
 	for j := 0; j < len(xKeys)-1; j++ {
@@ -201,7 +208,7 @@ func basisCalc(xKeys []int, x int, y int, counter int) {
 			tempValStr = tempValStr + " * "
 		}
 	}
-
+	tempValStr = tempValStr + " )"
 	mapOfLagrangiaBasis[y] = tempValStr
 
 	tempVal = "( x - "
@@ -227,8 +234,8 @@ func basisCalc(xKeys []int, x int, y int, counter int) {
 		}
 	}
 
-	mapOfBarricNumerator[y] = strconv.Itoa(y) + " * " + mapOfLagrangiaBasis[y] + " / " + tempValStr
-	mapOfBarricDenumerator[y] = mapOfLagrangiaBasis[y] + " / " + tempValStr
+	mapOfBarricNumerator[y] = "( " + strconv.Itoa(y) + " * " + mapOfLagrangiaBasis[y] + " / " + "( " + tempValStr + " ) )"
+	mapOfBarricDenumerator[y] = mapOfLagrangiaBasis[y] + " / " + "( " + tempValStr + " ) "
 
 }
 
@@ -270,8 +277,8 @@ func resultBarricentricForm() string {
 		}
 		counter++
 	}
-
-	return "( " + tempNumerator + " ) / ( " + tempDenumerator + " )"
+	MultiPolynomialsBarric = "( " + tempNumerator + " ) / ( " + tempDenumerator + " )"
+	return MultiPolynomialsBarric
 }
 
 // выводит полиномы в виде суммы полиномов(обычный вид), но не считает их
@@ -290,6 +297,7 @@ func resultNormalForm() {
 
 // Выводит базисы Лагранжа для каждой точки
 func printLagrangiaBasis() {
+	fmt.Println("\nLagrangia`s basisis")
 	var temp []string
 	for key, value := range mapOfLagrangiaBasis {
 		x := strings.Split(value, "")
@@ -298,6 +306,54 @@ func printLagrangiaBasis() {
 		temp = append(temp, value)
 	}
 	fmt.Println("\n")
+}
+
+func ReturnMultiPolynomial() map[string]string {
+	return mapOfMultiPolynomials
+}
+
+func ReturnMultiPolynomialBarric() string {
+
+	return MultiPolynomialsBarric
+}
+
+func ReturnNumeratorNormal() map[string]string {
+	return mapOfNormalNumerator
+}
+
+func ReturnDenumeratorNormal() map[string]string {
+	return mapOfNormalDenumerator
+}
+
+func ClearAllVar() {
+	for key := range mapOfBarricDenumerator {
+		delete(mapOfBarricDenumerator, key)
+	}
+	for key := range mapOfRootsLag {
+		delete(mapOfRootsLag, key)
+	}
+	for key := range mapOfPolynomials {
+		delete(mapOfPolynomials, key)
+	}
+	for key := range mapOfNormalNumerator {
+		delete(mapOfNormalNumerator, key)
+	}
+	for key := range mapOfNormalDenumerator {
+		delete(mapOfNormalDenumerator, key)
+	}
+	for key := range mapOfMultiPolynomials {
+		delete(mapOfMultiPolynomials, key)
+	}
+	for key := range mapOfLagrangiaBasis {
+		delete(mapOfLagrangiaBasis, key)
+	}
+	for key := range mapOfBarricNumerator {
+		delete(mapOfBarricNumerator, key)
+	}
+
+	inputLag = ""
+	MultiPolynomialsBarric = ""
+	coordinates = coordinates[:0]
 }
 
 func Start(input string) {
