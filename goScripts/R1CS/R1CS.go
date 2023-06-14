@@ -30,6 +30,8 @@ var vectorsC [][]int
 var witnesFormalChecker []string
 var witnesChecker []string
 
+var indexOfYInWitness int
+
 var oper = map[string]struct {
 	prec   int
 	rAssoc bool
@@ -116,6 +118,7 @@ func isDel(str []string, index int) int { //поместить в отдельн
 
 // Create a constraint with their "way" in evaluate form and calculate function in ParseInfix !!!Необходимо отделить сохранение ограничений и рассчет функции
 func constraintsEval(rpn string) (res int) { //поместить в отдельный пакет
+
 	str := strings.Split(rpn, " ")
 
 	for i := 0; i < len(str); i++ {
@@ -252,7 +255,18 @@ func constraintsFormalForm(rpn string) {
 			if str[i] == key && key == "^" {
 				first := str[i-2]
 				second := first
-				num, _ := strconv.Atoi(str[i-1])
+				num := 0
+
+				isConstraint := strings.Split(str[i-1], "n") // Need it for check if there are constraint or a variable in degree
+				_, err := strconv.Atoi(str[i-1])
+				switch {
+				case isConstraint[0] == "Co":
+					num = evalOneConstraint(str[i-1])
+				case err != nil:
+					num = mapOfRoots[str[i-1]]
+				default:
+					num, _ = strconv.Atoi(str[i-1])
+				}
 
 				for j := num; j > 1; j-- {
 					//num = numTemp * num1
@@ -301,8 +315,23 @@ func rootsMap(roots string) {
 
 }
 
+// Calculated only one constraint. Input: Constraint's number = Con1, Con2...
+func evalOneConstraint(constraintID string) int {
+	var constraintFunctionTemp []string
+	for i := 3; i < len(constraintsFormall); i++ { // Find constraint function
+		if constraintsFormall[i] == constraintID {
+			constraintFunctionTemp = append(constraintFunctionTemp, constraintsFormall[i-3], constraintsFormall[i-2], constraintsFormall[i-1]) // copy constraint function
+		}
+	}
+	constraintFunction := evalInput(strings.Join(constraintFunctionTemp, " "), true)
+
+	constraintFunctionInfix := ParseInfix(constraintFunction)
+	res := constraintsEval(constraintFunctionInfix)
+	return res
+}
+
 // записывает функцию уже с подставленными корнями
-func evalInput(function string) {
+func evalInput(function string, tag bool) string {
 	strFunc := strings.Split(function, " ")
 	for i := 0; i < len(strFunc); i++ {
 		_, ok := mapOfRoots[strFunc[i]]
@@ -311,7 +340,9 @@ func evalInput(function string) {
 		}
 	}
 	fmt.Println(strFunc)
+
 	evaluationInput = strings.Join(strFunc, " ")
+	return evaluationInput
 }
 
 // генерирует witness
@@ -322,6 +353,13 @@ func witnesInit() {
 
 		witnesFormal = append(witnesFormal, key)
 		witnes = append(witnes, val)
+	}
+
+	for i := 1; i < len(witnesFormal); i++ {
+		if witnesFormal[i] == "y" {
+			indexOfYInWitness = i
+			break
+		}
 	}
 
 	witnessAdd()
@@ -355,7 +393,7 @@ func witnessAdd() {
 func ZeroOneVectorFulling() (zeroOneVector [][]int) {
 	zeroOneVector = make([][]int, len(constraintsFormall)/4)
 	for i := range zeroOneVector {
-		zeroOneVector[i] = make([]int, len(witnes)-1)
+		zeroOneVector[i] = make([]int, len(witnesFormal)-1)
 	}
 	return zeroOneVector
 }
@@ -382,7 +420,7 @@ func r1CSCompilerOperatorC() { //тут конкретно много if
 	for i := 3; i < len(constraintsFormall); i++ {
 		for j := 0; j < len(witnesFormal); j++ {
 			if i == len(constraintsFormall)-1 && constraintsFormall[i] == witnesFormal[j] {
-				r1csVector[counter][2] = 1 // output of function
+				r1csVector[counter][indexOfYInWitness] = 1 // output of function
 				break
 
 			} else if constraintsFormall[i] == witnesFormal[j] {
@@ -457,6 +495,15 @@ func r1CSCompilerOperatorA() { //тут конкретно много if
 
 			} else if j == len(witnesFormal)-1 && r1csVector[counter][0] == 0 {
 				r1csVector[counter][0], _ = strconv.Atoi(constraintsFormall[i])
+				if constraintsFormall[i+1] == "+" {
+
+					for k := 0; k < len(witnes); k++ {
+						if witnesFormal[k] == constraintsFormall[i+2] { // Need for 2+x cases, where unknow variable at right input
+							r1csVector[counter][k] = 1
+						}
+					}
+
+				}
 				break
 			}
 
@@ -580,9 +627,12 @@ func Start(function string, roots string) {
 	roots_input = roots
 
 	rootsMap(roots_input)
-	evalInput(input)
+	evalInput(input, false)
 
 	constraintsFormalForm(ParseInfix(input))
+
+	evalInput(input, false)       // this needed cause here can be another evaluated function in evaluationInput variable
+	constraints = constraints[:0] // this needed cause it may be some values in constraints already
 
 	constraintsEval(ParseInfix(evaluationInput))
 

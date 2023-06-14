@@ -52,7 +52,7 @@ func savePolynomial(x int, y int, counter int) {
 	tempKey := "pol"
 	tempKey = tempKey + strconv.Itoa(counter)
 
-	tempPol := strconv.Itoa(y) + " x" + " - " + strconv.Itoa(x+y) + " / " + strconv.Itoa(x) + " - " + strconv.Itoa(x+y)
+	tempPol := "( " + strconv.Itoa(y) + " * ( x" + " - " + strconv.Itoa(x+y) + " ) ) / ( ( " + strconv.Itoa(x) + " - " + strconv.Itoa(x+y) + " ) )"
 	mapOfPolynomials[tempKey] = tempPol
 
 }
@@ -89,6 +89,7 @@ func saveMultPolynomial(xKeys []int, x int, y int, counter int) { //попроб
 			tempValStr = tempValStr + " * "
 		}
 	}
+
 	mapOfNormalNumerator[tempKey] = tempValStr + " )"
 	tempValStr = tempValStr + " )" + " / ( "
 	tempVal = "( " + strconv.Itoa(x) + " - "
@@ -110,6 +111,7 @@ func saveMultPolynomial(xKeys []int, x int, y int, counter int) { //попроб
 			tempValStr = tempValStr + " * "
 		}
 	}
+
 	denum := strings.Split(tempValStr, "/")
 	mapOfNormalDenumerator[tempKey] = denum[1] + " )"
 	tempValStr = tempValStr + " )"
@@ -323,6 +325,10 @@ func ReturnNumeratorNormal() map[string]string {
 
 func ReturnDenumeratorNormal() map[string]string {
 	return mapOfNormalDenumerator
+}
+
+func ReturnPolynomialByOnePoint() map[string]string {
+	return mapOfPolynomials
 }
 
 func ClearAllVar() {

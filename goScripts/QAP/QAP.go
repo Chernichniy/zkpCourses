@@ -34,9 +34,19 @@ func isFinite(num float64) bool {
 
 // Initialized two-demesional slice
 func vectorQAPSizeAllocate(r1csVecor [][]int, vectName string) [][]int {
+
 	var temp = make([][]int, len(r1csVecor[0]))
-	for i := range temp {
-		temp[i] = make([]int, len(r1csVecor))
+
+	switch { // Needed when we going to interpolate polynomials by only one point, cause numerator
+	// of those interpolated polynoail are consost of two values: value "x" and value "number"
+	case len(r1csVecor) == 1:
+		for i := range temp {
+			temp[i] = make([]int, 2)
+		}
+	default:
+		for i := range temp {
+			temp[i] = make([]int, len(r1csVecor))
+		}
 	}
 
 	switch vectName {
@@ -326,6 +336,23 @@ func multiplyMonoms(str string, signForLeftNum string, signForRightNum string) s
 // Example(code interpritated view): x1-x2-* =
 func calcFunc(function string) (result map[string]int) {
 	tempSliceStr := strings.Split(function, " ")
+	var mapForTwoOrLessPointsInterp = make(map[string]int)
+
+	if len(tempSliceStr) < 6 { // If polynomial interpolated only from 2 (or less) points
+		mapForTwoOrLessPointsInterp["1"] = 1
+		mapForTwoOrLessPointsInterp["0"], _ = strconv.Atoi(tempSliceStr[2])
+
+		for key, value := range mapForTwoOrLessPointsInterp {
+			if key == "0" {
+				value = value * -1
+			}
+			yCoordinateInt, _ := strconv.Atoi(tempSliceStr[0])
+			mapForTwoOrLessPointsInterp[key] = numberByModule(value * yCoordinateInt)
+		}
+		result = mapForTwoOrLessPointsInterp
+		return result
+	}
+
 	for i := range tempSliceStr { // Loop interpritate normal "x" view into string [coefficieent of x][x][degree of x]
 		if tempSliceStr[i] == "x" {
 			tempSliceStr[i] = "1x1"
@@ -485,7 +512,7 @@ func xyCreate(vectors [][]int, vectName string) {
 	var coordin []string
 	x := []string{"x"}
 	y := []string{"y"}
-	for j := 0; j < len(vectors[1]); j++ { // Get coordinates for interpolation
+	for j := 0; j < len(vectors[0]); j++ { // Get coordinates for interpolation
 		for i := 0; i < len(vectors); i++ {
 			x = append(x, strconv.Itoa(i+1), strconv.Itoa(j+1))
 			coordin = append(coordin, strings.Join(x, ""), "=", strconv.Itoa(i+1))
@@ -497,9 +524,23 @@ func xyCreate(vectors [][]int, vectName string) {
 
 		}
 		tempStr := strings.Join(coordin, " ")
+
 		Lagrangia.Start(tempStr)
 
-		QapCreate(Lagrangia.ReturnNumeratorNormal(), Lagrangia.ReturnDenumeratorNormal(), vectName)
+		if len(vectors) == 1 { // If interpolate polynomial by one point
+			polynomialByOnePoint := Lagrangia.ReturnPolynomialByOnePoint()
+			tempPol := strings.Split(polynomialByOnePoint["pol0"], " / ")
+
+			tempMapNumerator := make(map[string]string)
+			tempMapDenumerator := make(map[string]string)
+
+			tempMapNumerator["pol0"] = tempPol[0]
+			tempMapDenumerator["pol0"] = tempPol[1]
+			QapCreate(tempMapNumerator, tempMapDenumerator, "pol0")
+		} else {
+			QapCreate(Lagrangia.ReturnNumeratorNormal(), Lagrangia.ReturnDenumeratorNormal(), vectName)
+		}
+
 		coordin = coordin[:0]
 		Lagrangia.ClearAllVar()
 	}
@@ -540,7 +581,6 @@ func fructionsByModule(numerator int, denominator int) int {
 
 func numberByModule(number int) int {
 
-	fmt.Println(number)
 	switch {
 	case number > 0:
 		return number % module
@@ -623,8 +663,9 @@ func polynomialZCreate() {
 	var index int
 
 	for i := range constraints {
-		if constraints[i] == "y" {
-			index = i + 1
+		if constraints[i] == "Con1" {
+			index = i
+			break
 		}
 	}
 
@@ -652,7 +693,7 @@ func polynomialZCreate() {
 
 }
 
-func polynomialsDevide(numerator []int, denominator []int) (bool, []int) { //НЕДОДЕЛАНО
+func polynomialsDevide(numerator []int, denominator []int) (bool, []int) {
 
 	var tempDenominator = make([]int, len(denominator))
 	var tempNumerator = make([]int, len(numerator))
@@ -724,6 +765,7 @@ func fullQAPPolynomialCalc() {
 	for i := len(vectorA); i < len(vectorAMultB); i++ {
 		resultVector[i] = vectorAMultB[i]
 	}
+
 	polynomialZCreate()
 
 	//fmt.Println(resultVector)
@@ -753,11 +795,13 @@ func QAPVectCReturn() [][]int {
 }
 
 // Function for startiing calculating
+// НУЖНО ДОБАВИТЬ ОБРАБОТКУ ВХОДНЫХ ДАННЫХ, КОТОРАЯ УПРОЩАЕТ ФУНКЦИИ ТИПО Х+Х -> 2*x
 func main() {
 	module = 11
 	//r1cs.Start("x ^ 3 + x + 5", "x = 2 y = 15")
 	//r1cs.Start("( x + z ) ^ 2 + z + 1", "x = 1 z = 2 y = 12")
-	r1cs.Start("x ^ 2 + 2", "x = 2 y = 6")
+	r1cs.Start("x ^ j + h ^ k", "x = 2 j = 3 h = 3 k = 2 y = 17")
+	//r1cs.Start("x ^ ( 2 + z ) * g", "x = 2 z = 1 g = 2 y = 16")
 
 	// Allocate memory for QAP vectors
 	vectorQAPSizeAllocate(r1cs.ReturnVectorsA(), "A")
