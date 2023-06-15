@@ -2,10 +2,13 @@ package r1cs
 
 import (
 	"fmt"
-	"math"
+	"html/template"
+	"net/http"
 	"strconv"
 	"strings"
 )
+
+var tpl *template.Template
 
 var input string
 var roots_input string
@@ -14,24 +17,25 @@ var roots_input string
 // var roots_input = "x = 3 y = 35" //эти две переменные мы получаем с сайта
 //var roots_input = "x = 1 z = 2" //эти две переменные мы получаем с сайта
 
-var mapOfRoots = make(map[string]int) //обработанные значения корней в виде key = value
-var evaluationInput string            // строка функции с подставленными private and public inputs
+var mapOfRoots = make(map[string]int) // Store roots of our function and y value in form: key = value
+var evaluationInput string            // String of function with replaced characters variables by numbers of private and public inputs
 
-var constraints []string        //constraints в численной форме
-var constraintsFormall []string //constraints в буквенной форме
+var constraints []string        // Store constraints in form of numbers (2*2=4 4+2=6 ...)
+var constraintsFormall []string // Store constraints in form of characters (x*x=Con1 Con1+2=Con2 ...)
 
-var witnes []int          //witness в численной форме
-var witnesFormal []string //witness в буквенной форме
+var witnes []int          // Store witness in form of numbers
+var witnesFormal []string // Store witness in form of characters
 
-var vectorsA [][]int
-var vectorsB [][]int
-var vectorsC [][]int
+var vectorsA [][]int // Store R1CS representation of left input (matrix)
+var vectorsB [][]int // Store R1CS representation of right input (matrix)
+var vectorsC [][]int // Store R1CS representation of output (matrix)
 
-var witnesFormalChecker []string
-var witnesChecker []string
+var witnesFormalChecker []string // Store witness in form of characters but in (leftInput*rightInput-Output). Uses for checking correctness of R1CS matricis
+var witnesChecker []string       // Store witness in form of numbers but in (2*2-4). Uses for checking correctness of R1CS matricis
 
-var indexOfYInWitness int
+var indexOfYInWitness int // Store index of witness vector, where "y" value situated
 
+// Struct of operators
 var oper = map[string]struct {
 	prec   int
 	rAssoc bool
@@ -43,8 +47,9 @@ var oper = map[string]struct {
 	"-": {2, false},
 }
 
-// переводит из инфиксного вида записи функции в постфиксный
-func ParseInfix(e string) (rpn string) { //попробовать свою реализацию сддеалть https://github.com/codefreezr/rosettacode-to-go/blob/df006db732e5/tasks/Parsing-Shunting-yard-algorithm/parsing-shunting-yard-algorithm.go
+// Convert function from infix view to postfix view (Reverse Polish Notation)
+// On input: 3^2+5*x; Output: 32^5x*+
+func ParseInfix(e string) (rpn string) {
 	var stack []string // holds operators and left parenthesis
 	for _, tok := range strings.Fields(e) {
 		switch tok {
@@ -92,116 +97,77 @@ func ParseInfix(e string) (rpn string) { //попробовать свою ре�
 	return
 }
 
-// Проверяет, действительно ли число, с типом float64 является int-овым числом, тоесть isInt(2,0) == true; isInt(2,1)==false
-func isInt(val float64) bool { //поместить в отдельный пакет
-	return val == float64(int(val))
-}
-
-// Проверяет, является ли значение бесконечностью
-// Используется при делении на 0
-func isFinite(num float64) bool { //поместить в отдельный пакет
-	return !math.IsInf(num, 0) && !math.IsNaN(num)
-}
-
-// Находит индекс, в котором находится знак деления
-// Используется при делении на 0
-func isDel(str []string, index int) int { //поместить в отдельный пакет
-	var res int
-	for i := index; i < len(str); i++ {
-		if str[i] == "/" {
-			res = i
-			break
-		}
-	}
-	return res
-}
-
-// Create a constraint with their "way" in evaluate form and calculate function in ParseInfix !!!Необходимо отделить сохранение ограничений и рассчет функции
-func constraintsEval(rpn string) (res int) { //поместить в отдельный пакет
+// 1. Evaluate function wich given in postfix view
+// 2. Calculate and saves the constraint with their "way" in number form
+func constraintsEval(rpn string) (res int) {
 
 	str := strings.Split(rpn, " ")
 
 	for i := 0; i < len(str); i++ {
 		if i+2 <= len(str)-1 {
-			num1, _ := strconv.ParseFloat(str[i], 64)
-			num2, _ := strconv.ParseFloat(str[i+1], 64)
-			num3, _ := strconv.ParseFloat(str[i+2], 64)
-			if num3 == 0 { //нужно перегрузка операторов или что-то типо лямба функции
+			num1, _ := strconv.Atoi(str[i])
+			num2, _ := strconv.Atoi(str[i+1])
+			num3, _ := strconv.Atoi(str[i+2]) // If 3rd value equal to 0 then 3rd value is a operator
+			if num3 == 0 {
 
 				switch str[i+2] {
 				case "+":
-					num := num1 + num2
-					if isInt(num) {
-						str[i+2] = strconv.Itoa(int(num))
-					} else {
-						str[i+2] = fmt.Sprintf("%f", num)
-					}
-					constraintsSaver(str[i], str[i+2], str[i+1], str[i+2], true)
-					str = append(str[:i], str[i+2:]...)
-					i = -1
+
+					num := num1 + num2                                                    // Calculate output of constraint
+					constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num), true) // Call func for saving constraint
+
+					str[i+2] = strconv.Itoa(int(num)) // Replace operator by output of constraint
+
+					str = append(str[:i], str[i+2:]...) // Delete inputs of constraints
+					i = -1                              // Starting from begining of function in postfix view
 				case "*":
-					num := num1 * num2
-					if isInt(num) {
-						str[i+2] = strconv.Itoa(int(num))
-					} else {
-						str[i+2] = fmt.Sprintf("%f", num)
-					}
-					constraintsSaver(str[i], str[i+2], str[i+1], str[i+2], true)
-					str = append(str[:i], str[i+2:]...)
-					i = -1
+					num := num1 * num2 // Calculate output of constraint
+					constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num), true)
+					str[i+2] = strconv.Itoa(int(num)) // Replace operator by output of constraint
+
+					str = append(str[:i], str[i+2:]...) // Delete inputs of constraints
+					i = -1                              // Starting from begining of function in postfix view
 				case "^":
-					numTemp := num1
+					numTemp := num1 // Raising to degree = multiply numbers few times by themselves
 					num := num1
-					var fl bool
 
-					for j := num2; j > 1; j-- {
+					for j := num2; j > 1; j-- { // Num2 - degree, so we multiply "x" on "x"  Num2 times
 						num = numTemp * num1
-						if isInt(num) {
-							constraintsSaver(strconv.Itoa(int(numTemp)), "*", str[i], strconv.Itoa(int(num)), true)
 
-							fl = true
-						} else {
-							constraintsSaver(fmt.Sprintf("%f", numTemp), "*", str[i], fmt.Sprintf("%f", num), true)
+						constraintsSaver(strconv.Itoa(int(numTemp)), "*", str[i], strconv.Itoa(int(num)), true) // Call func for saving constraint for each multiplying
 
-							fl = false
-						}
 						numTemp = num
 					}
-					//constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
-					if fl {
-						str[i+2] = strconv.Itoa(int(num))
-					} else {
-						str[i+2] = fmt.Sprintf("%f", num)
-					}
-					//constraintsSaver(strconv.Itoa(numTemp), "*", str[i], strconv.Itoa(num), true)
-					str = append(str[:i], str[i+2:]...)
-					i = -1
-				case "-":
+
+					str[i+2] = strconv.Itoa(int(num)) // Replace operator by output of constraint
+
+					str = append(str[:i], str[i+2:]...) // Delete inputs of constraints
+					i = -1                              // Starting from begining of function in postfix view
+
+					/*case "-": Not implemented yet
 
 					num := num1 - num2
 
-					if isInt(num) { // проверка инт или флоат
-						str[i+2] = strconv.Itoa(int(num))
-					} else {
-						str[i+2] = fmt.Sprintf("%f", num)
-					}
+					str[i+2] = strconv.Itoa(int(num))
+
 					str = append(str[:i], str[i+2:]...)
 					i = -1
-				case "/":
 
-					num := num1 / num2
-					if isFinite(num) == false {
-						num = 0
-					}
-					if isInt(num) {
-						str[i+2] = strconv.Itoa(int(num))
-					} else {
-						//str[i+2] = strconv.FormatFloat(num, 'E', -1, 64)
-						str[i+2] = fmt.Sprintf("%f", num)
+						case "/":
 
-					}
-					str = append(str[:i], str[i+2:]...)
-					i = -1
+							num := num1 / num2
+							if isFinite(num) == false {
+								num = 0
+							}
+							if isInt(num) {
+								str[i+2] = strconv.Itoa(int(num))
+							} else {
+								//str[i+2] = strconv.FormatFloat(num, 'E', -1, 64)
+								str[i+2] = fmt.Sprintf("%f", num)
+
+							}
+							str = append(str[:i], str[i+2:]...)
+							i = -1*/
 				}
 
 			}
@@ -212,26 +178,27 @@ func constraintsEval(rpn string) (res int) { //поместить в отдел�
 	// }
 }
 
-// constraints evaluation way: true for evaluation form(with roots), false for formal view
+// Save constraint with their "way"
+// Input true: save constraints in number view; Input false: save constrints in formal view
 func constraintsSaver(lftInput string, operation string, rghtInput string, output string, types bool) {
 	switch types {
 	case true:
-		if operation == "^" { // приводим к виду только сумм и произведения
+		if operation == "^" { // Needed cause in R1CS only addition or multiply are can be
 			rghtInput = lftInput
 			operation = "*"
 		}
-		constraints = append(constraints, lftInput) // помещаем поочередно
+		constraints = append(constraints, lftInput) // Insert one by one
 		constraints = append(constraints, operation)
 
 		constraints = append(constraints, rghtInput)
 		constraints = append(constraints, output)
 
 	case false:
-		if operation == "^" { // приводим к виду только сумм и произведения
+		if operation == "^" { // Needed cause in R1CS only addition or multiply are can be
 			rghtInput = lftInput
 			operation = "*"
 		}
-		constraintsFormall = append(constraintsFormall, lftInput) // помещаем поочередно
+		constraintsFormall = append(constraintsFormall, lftInput) // Insert one by one
 		constraintsFormall = append(constraintsFormall, operation)
 
 		constraintsFormall = append(constraintsFormall, rghtInput)
@@ -240,11 +207,11 @@ func constraintsSaver(lftInput string, operation string, rghtInput string, outpu
 
 }
 
-// Create a constraints with their "way" in formal form
+// Calculate and saves the constraint with their "way" in formal form
 func constraintsFormalForm(rpn string) {
 	str := strings.Split(rpn, " ")
-	a := oper   //нужно для проверки операторов
-	numCon := 1 //счетчик номера constraint
+	a := oper   // Operator checking
+	numCon := 1 // Counter of constraint number
 	var constrNum = []string{"Con", ""}
 
 	for i := 0; i < len(str); i++ {
@@ -269,15 +236,12 @@ func constraintsFormalForm(rpn string) {
 				}
 
 				for j := num; j > 1; j-- {
-					//num = numTemp * num1
 					constraintsSaver(first, "*", second, strings.Join(constrNum, ""), false)
-					//numTemp = num
 					numCon = numCon + 1
 					first = strings.Join(constrNum, "")
 					constrNum[1] = strconv.Itoa(numCon)
 				}
-				//constraintsSaver(str[i], str[i+2], str[i+1], strconv.Itoa(num))
-				//str[i+2] = strconv.Itoa(num)
+
 				numCon = numCon - 1
 				constrNum[1] = strconv.Itoa(numCon)
 
@@ -301,27 +265,29 @@ func constraintsFormalForm(rpn string) {
 
 }
 
-// вытаскивает private и public inputs из programm input
+// Get private and public inputs form general input
 func rootsMap(roots string) {
 	strRoots := strings.Split(roots, " ")
 
 	for i := 0; i < len(strRoots); i++ {
 		if strRoots[i] == "=" {
 			var temp, _ = strconv.Atoi(strRoots[i+1])
-			mapOfRoots[strRoots[i-1]] = temp //помещает корни в key=value форму
+			mapOfRoots[strRoots[i-1]] = temp // Placed roots in map
 		}
 	}
 	fmt.Println(mapOfRoots)
 
 }
 
-// Calculated only one constraint. Input: Constraint's number = Con1, Con2...
+// Calculated only one constraint.
+// Input: Constraint's number = Con1, Con2... Oputput: con1=2+3=5 - 5 is output
 func evalOneConstraint(constraintID string) int {
 	var constraintFunctionTemp []string
 	for i := 3; i < len(constraintsFormall); i++ { // Find constraint function
 		if constraintsFormall[i] == constraintID {
-			constraintFunctionTemp = append(constraintFunctionTemp, constraintsFormall[i-3], constraintsFormall[i-2], constraintsFormall[i-1]) // copy constraint function
+			constraintFunctionTemp = append(constraintFunctionTemp, constraintsFormall[i-3], constraintsFormall[i-2], constraintsFormall[i-1]) // Copy constraint function
 		}
+
 	}
 	constraintFunction := evalInput(strings.Join(constraintFunctionTemp, " "), true)
 
@@ -330,7 +296,7 @@ func evalOneConstraint(constraintID string) int {
 	return res
 }
 
-// записывает функцию уже с подставленными корнями
+// Replaced characters in input function (infix view) by corresponding values from mapOfRoots
 func evalInput(function string, tag bool) string {
 	strFunc := strings.Split(function, " ")
 	for i := 0; i < len(strFunc); i++ {
@@ -345,30 +311,31 @@ func evalInput(function string, tag bool) string {
 	return evaluationInput
 }
 
-// генерирует witness
+// Generating witnes in formal and number views
 func witnesInit() {
-	witnes = append(witnes, 1)
-	witnesFormal = append(witnesFormal, strconv.Itoa(1))
+
+	witnes = append(witnes, 1)                           // Put 1 on first place in vector
+	witnesFormal = append(witnesFormal, strconv.Itoa(1)) // Put in vector public and private inputs
 	for key, val := range mapOfRoots {
 
 		witnesFormal = append(witnesFormal, key)
 		witnes = append(witnes, val)
 	}
 
-	for i := 1; i < len(witnesFormal); i++ {
+	for i := 1; i < len(witnesFormal); i++ { // Find index of "y" in witness vector
 		if witnesFormal[i] == "y" {
 			indexOfYInWitness = i
 			break
 		}
 	}
 
-	witnessAdd()
-	formalWitness()
+	witnessAdd()    // Call func for add constraints variables in numbers view
+	formalWitness() // Call func for add constraints variables in formal view
 }
 
-// создает формальный вид witness
+// Create witness in formal view
 func formalWitness() {
-	for i := 0; i < len(constraintsFormall); i++ {
+	for i := 0; i < len(constraintsFormall); i++ { // Each 4th elements are equal to output of one corresponding constraint
 		if (i+1)%4 == 0 {
 			//temp, _ := strconv.Atoi(constraints[i])
 			witnesFormal = append(witnesFormal, constraintsFormall[i])
@@ -378,10 +345,10 @@ func formalWitness() {
 	//witnesFormal[len(witnesFormal)-1]=
 }
 
-// записывает constraint`s output witnes
+// Added constraints outputs in witness vector of numbers form
 func witnessAdd() {
 	for i := 0; i < len(constraints); i++ {
-		if (i+1)%4 == 0 {
+		if (i+1)%4 == 0 { // Each 4th elements are equal to output of one corresponding constraint
 			temp, _ := strconv.Atoi(constraints[i])
 			witnes = append(witnes, temp)
 		}
@@ -389,7 +356,7 @@ func witnessAdd() {
 
 }
 
-// создает нулевой двумерный срез для хранения векторов (1,0,0,0,1)...
+// Allocate memory for zero fulled two demensional array wich are matrix of R1CS representation for inputs and output
 func ZeroOneVectorFulling() (zeroOneVector [][]int) {
 	zeroOneVector = make([][]int, len(constraintsFormall)/4)
 	for i := range zeroOneVector {
@@ -398,7 +365,7 @@ func ZeroOneVectorFulling() (zeroOneVector [][]int) {
 	return zeroOneVector
 }
 
-// распределяет какую функцию вызывать в зависимости от оператора  a*b-c=0 для заполнения двумерного среза
+// Determine wich func to call. Func for inputs or output R1CS
 func operatorsPipe(operator string) {
 	switch operator {
 	case "a":
@@ -410,95 +377,93 @@ func operatorsPipe(operator string) {
 	}
 }
 
-// заполняет дмуерный срез для оператора c
-func r1CSCompilerOperatorC() { //тут конкретно много if
+// Filled two demensional array for output C of R1CS
+func r1CSCompilerOperatorC() {
 
 	r1csVector := ZeroOneVectorFulling()
-	//fmt.Println(r1csVector)
-	counter := 0
 
-	for i := 3; i < len(constraintsFormall); i++ {
+	counter := 0 // Needed for rows number controlling
+
+	for i := 3; i < len(constraintsFormall); i++ { // On each 3rd index the output is situated
 		for j := 0; j < len(witnesFormal); j++ {
-			if i == len(constraintsFormall)-1 && constraintsFormall[i] == witnesFormal[j] {
-				r1csVector[counter][indexOfYInWitness] = 1 // output of function
+			if i == len(constraintsFormall)-1 && constraintsFormall[i] == witnesFormal[j] { // If index of witness vector last then put 1 in "y" index
+				r1csVector[counter][indexOfYInWitness] = 1 // output of function  -  "y" value
 				break
 
-			} else if constraintsFormall[i] == witnesFormal[j] {
+			} else if constraintsFormall[i] == witnesFormal[j] { // Put in index, where witness variable situated, value 1 (if statement true)
 				r1csVector[counter][j] = 1
 				break
 			}
 
 		}
-		i = i + 3
-		counter = counter + 1
+		i = i + 3             // Next output
+		counter = counter + 1 // Next row
 
 	}
 	vectorsC = r1csVector
 
 }
 
-// заполняет дмуерный срез для оператора b
-func r1CSCompilerOperatorB() { //тут конкретно много if
+// Filled two demensional array for right input B of R1CS
+func r1CSCompilerOperatorB() {
 
 	r1csVector := ZeroOneVectorFulling()
-	//fmt.Println(r1csVector)
-	counter := 0
+	counter := 0 // Needed for rows number controlling
 
-	for i := 2; i < len(constraintsFormall); i++ {
+	for i := 2; i < len(constraintsFormall); i++ { // On each 3nd index the output is situated
 		for j := 0; j < len(witnesFormal); j++ {
-			if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i-1] != "+" { //проблема: если констраинт 2*x, а двойки в витнесе нет
+			if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i-1] != "+" { // Put in index, where witness variable situated, value 1 (if statement true)
 				r1csVector[counter][j] = 1
 				break
 
-			} else if /*constraintsFormall[i] == witnesFormal[j] &&*/ constraintsFormall[i-1] == "+" {
+			} else if constraintsFormall[i-1] == "+" { // If there "+" in constraint then we put 1 value in 0 index, cause constraints looks like this: (x+2)*1 (R1CS spec), so value 1 - right input
 				r1csVector[counter][0] = 1
 				break
-			} else if j == len(witnesFormal)-1 {
+			} else if j == len(witnesFormal)-1 { // If in witness veactor not stored the same value, then this value is number
 				r1csVector[counter][0], _ = strconv.Atoi(constraintsFormall[i])
 				break
 			}
 
 		}
-		i = i + 3
-		counter = counter + 1
+		i = i + 3             // Next output
+		counter = counter + 1 // Next row
 
 	}
 	vectorsB = r1csVector
 
 }
 
-// заполняет дмуерный срез для оператора a
-func r1CSCompilerOperatorA() { //тут конкретно много if
+// Filled two demensional array for left input A of R1CS
+func r1CSCompilerOperatorA() {
 
 	r1csVector := ZeroOneVectorFulling()
 	//fmt.Println(r1csVector)
-	counter := 0
+	counter := 0 // Needed for rows number controlling
 
 	for i := 0; i < len(constraintsFormall); i++ {
 		for j := 0; j < len(witnesFormal); j++ {
-			if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i+1] != "+" {
+			if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i+1] != "+" { // Put in index, where witness variable situated, value 1 (if statement true)
 				r1csVector[counter][j] = 1
 				break
 
-			} else if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i+1] == "+" {
+			} else if constraintsFormall[i] == witnesFormal[j] && constraintsFormall[i+1] == "+" { // If constraints describe addtion, then this constraint could be (x+2)*1 where x+2 have to store in left input matrix
 
 				r1csVector[counter][j] = 1
-				for k := 0; k < len(witnesFormal); k++ {
-					if witnesFormal[k] == constraintsFormall[i+2] {
+				for k := 0; k < len(witnesFormal); k++ { // Check if there are knownable value in witness vector
+					if witnesFormal[k] == constraintsFormall[i+2] { // If yes put 1 in corresponding index
 						r1csVector[counter][k] = 1
 						break
-					} else if k == len(witnesFormal)-1 {
+					} else if k == len(witnesFormal)-1 { // If no then it's a number and we have to put 1 to 0 index
 
 						r1csVector[counter][0], _ = strconv.Atoi(constraints[i+2])
 					}
 				}
 
-			} else if j == len(witnesFormal)-1 && r1csVector[counter][0] == 0 {
+			} else if j == len(witnesFormal)-1 && r1csVector[counter][0] == 0 { // Check if we compare all variables but can't find any coincidences.
 				r1csVector[counter][0], _ = strconv.Atoi(constraintsFormall[i])
-				if constraintsFormall[i+1] == "+" {
-
+				if constraintsFormall[i+1] == "+" { // and we know that in matrix A can't be all values of row equals 0, so, maybe we have 2 + x form of constraint
 					for k := 0; k < len(witnes); k++ {
-						if witnesFormal[k] == constraintsFormall[i+2] { // Need for 2+x cases, where unknow variable at right input
+						if witnesFormal[k] == constraintsFormall[i+2] { // Need for 2+x cases, where unknow (didn't store in witness vector) variable at right input
 							r1csVector[counter][k] = 1
 						}
 					}
@@ -508,8 +473,8 @@ func r1CSCompilerOperatorA() { //тут конкретно много if
 			}
 
 		}
-		i = i + 3
-		counter = counter + 1
+		i = i + 3             // Next output
+		counter = counter + 1 // Next row
 
 	}
 
@@ -517,7 +482,7 @@ func r1CSCompilerOperatorA() { //тут конкретно много if
 
 }
 
-// сохраняет значения индексов, в которых находятся ненулевые значения двумерного среза
+// Store indexes numbers wich are not equal 0. This funct needed for next checking of correctness of R1CS matricis
 func witnessReprIndexes(vectors [][]int) (indexes [][]int) {
 
 	indexes = make([][]int, len(vectors))
@@ -527,7 +492,7 @@ func witnessReprIndexes(vectors [][]int) (indexes [][]int) {
 
 	k := 0
 	for i := 0; i < len(vectors); i++ {
-		for j := 0; j < len(vectors[i]); j++ {
+		for j := 0; j < len(vectors[i]); j++ { // If value in index equal 1 then save index number
 			if vectors[i][j] == 1 {
 				indexes[i][k] = j
 				k = k + 1
@@ -543,7 +508,7 @@ func witnessReprIndexes(vectors [][]int) (indexes [][]int) {
 	return indexes
 }
 
-// выводит witness построенный на основе двумерного среза в формальном виде. Служит для проверки правильности вычеслений
+// Print witness in formal form wich builded by R1CS matrcis. needed for next checking of correctness of R1CS matricis
 func witnessReprCheckerFormal() {
 	a := witnessReprIndexes(vectorsA)
 	b := witnessReprIndexes(vectorsB)
@@ -572,7 +537,7 @@ func witnessReprCheckerFormal() {
 
 }
 
-// выводит witness построенный на основе двумерного среза в числовом виде. Служит для проверки правильности вычеслений
+// Print witness in numbers form wich builded by R1CS matrcis. needed for next checking of correctness of R1CS matricis
 func witnessReprChecker() {
 	a := witnessReprIndexes(vectorsA)
 	b := witnessReprIndexes(vectorsB)
@@ -601,7 +566,7 @@ func witnessReprChecker() {
 
 }
 
-// Даем вектора к другим пакетам
+// Return r1cs vectors and matrcis for others packages
 func ReturnVectorsA() [][]int {
 	return vectorsA
 }
@@ -623,6 +588,10 @@ func ReturnWitnessNumbers() []int {
 }
 
 func Start(function string, roots string) {
+	main(function, roots)
+}
+
+func main(function string, roots string) {
 	input = function
 	roots_input = roots
 
@@ -661,4 +630,12 @@ func Start(function string, roots string) {
 	fmt.Println("Checker of satisfaction of R1CS conditions wich calculate by R1CS matrices (numbers representation): ")
 	fmt.Println(witnesChecker)
 
+	tpl, _ = tpl.ParseGlob("R1CS/*.html")
+	http.HandleFunc("/r1cs", r1csHandler)
+	http.ListenAndServe(":8181", nil)
+
+}
+
+func r1csHandler(w http.ResponseWriter, r *http.Request) {
+	tpl.ExecuteTemplate(w, "r1cs.html", vectorsA)
 }
