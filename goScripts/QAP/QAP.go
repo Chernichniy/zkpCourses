@@ -261,7 +261,7 @@ func leftAndRightOfOneValueInputAppend(input []string) ([]string, int) {
 		}
 	}
 
-	return input, index
+	return input, index //(x-1)(x-2) = x-3x+2;  x 1 - x 2 - *;  [1][x][1] [1][x][0]
 }
 
 // 1. Multiplies calculated coeeficint of monomial(after brackets opening) by "y" coordinate
@@ -564,6 +564,8 @@ func copySlice(originalSlice [][]int, destinationSlice [][]int) {
 	}
 }
 
+// Doing division by module
+// Example: 3/4 mod 15 -> while 3+module/4 without reminder -> 48/4 -> result number is 48/4 = 12 => 3/4 mod 15 = 12
 func fructionsByModule(numerator int, denominator int) int {
 
 	for numerator%denominator != 0 {
@@ -579,6 +581,8 @@ func fructionsByModule(numerator int, denominator int) int {
 
 }
 
+// Convert number by module
+// Examples: 4 mod 3 = 1; -4 mod 3 = 2
 func numberByModule(number int) int {
 
 	switch {
@@ -593,6 +597,8 @@ func numberByModule(number int) int {
 	return number
 }
 
+// Multiply one value of witness vector on corresponding row of QAP representations of matrices A,B,C
+// Example: w1*A1; w2*A2; w3*A3 ... wn*An, n - number of row
 func witnessMultOnQAP(vector [][]int) [][]int {
 	witness := r1cs.ReturnWitnessNumbers()
 	resultVector := vectorQAPSizeAllocate(r1cs.ReturnVectorsA(), "")
@@ -605,6 +611,8 @@ func witnessMultOnQAP(vector [][]int) [][]int {
 	return resultVector
 }
 
+// Addition rows of QAP representation of R1CS matrices after multiplying their rows on witness vector
+// Eexample: A1+A2+A3+...+An, n - number of rows
 func summOfQAPParts(vector [][]int) []int {
 	vectorAfterWitnessMult := witnessMultOnQAP(vector)
 
@@ -619,6 +627,7 @@ func summOfQAPParts(vector [][]int) []int {
 	return resultVector
 }
 
+// Multiply QAP representation of matrices A and B (A*B)
 func qapVectorsMult(vectorA []int, vectorB []int) []int {
 
 	var expressionStrForCals []string
@@ -626,7 +635,7 @@ func qapVectorsMult(vectorA []int, vectorB []int) []int {
 	for i := 0; i < len(vectorA); i++ {
 		expressionStrForCals = append(expressionStrForCals, strconv.Itoa(vectorA[i])+"x"+strconv.Itoa(i))
 	}
-	expressionStrForCals = append(expressionStrForCals, "*", "*") //нужно из-за стандартизации
+	expressionStrForCals = append(expressionStrForCals, "*", "*") // Standartization of multiplyMonoms func input
 
 	for i := 0; i < len(vectorB); i++ {
 		expressionStrForCals = append(expressionStrForCals, strconv.Itoa(vectorB[i])+"x"+strconv.Itoa(i))
@@ -636,7 +645,7 @@ func qapVectorsMult(vectorA []int, vectorB []int) []int {
 	var tempValSlice []string
 
 	for j := len(vectorA) + 2; j < len(expressionStrForCals); j++ {
-		for i := 0; i < len(vectorA); i++ { // Cycle, which saves multiplier
+		for i := 0; i < len(vectorA); i++ { // Cycle, wich saves result of multiplying
 			tempVal = expressionStrForCals[i]
 			tempValSlice = append(tempValSlice, multiplyMonoms(tempVal+"*"+expressionStrForCals[j], "", ""))
 		}
@@ -657,6 +666,7 @@ func qapVectorsMult(vectorA []int, vectorB []int) []int {
 
 }
 
+// Calculate vanish (Z) polynomial
 func polynomialZCreate() {
 	constraints := r1cs.ReturnWitnessFormal()
 	fmt.Println(constraints)
@@ -685,14 +695,17 @@ func polynomialZCreate() {
 	var mapOfZPolynomialNumerator = make(map[string]string)
 	var mapOfZPolynomialDenumerator = make(map[string]string)
 
-	mapOfZPolynomialNumerator["polZ"] = strings.Join(zPolynomialSlice, "") // needed for QapCreate func call
-	mapOfZPolynomialDenumerator["polZ"] = "1"
+	mapOfZPolynomialNumerator["polZ"] = strings.Join(zPolynomialSlice, "") // Needed for QapCreate func call
+	mapOfZPolynomialDenumerator["polZ"] = "1"                              // Same as previous
 
 	QapCreate(mapOfZPolynomialNumerator, mapOfZPolynomialDenumerator, "Z")
 	fmt.Println(qapVectorZ)
 
 }
 
+// Devided QAP polynomial on vanish (Z) polynomial
+// Input numerator = QAP polynomial coefficient and degrees
+// Input denominator = vanish polynomial coefficient and degrees
 func polynomialsDevide(numerator []int, denominator []int) (bool, []int) {
 
 	var tempDenominator = make([]int, len(denominator))
@@ -749,6 +762,7 @@ func polynomialsDevide(numerator []int, denominator []int) (bool, []int) {
 	return true, tempNumerator
 }
 
+// Created QAP polynomial
 func fullQAPPolynomialCalc() {
 	vectorA := summOfQAPParts(qapVectorA)
 	vectorB := summOfQAPParts(qapVectorB)
@@ -768,13 +782,15 @@ func fullQAPPolynomialCalc() {
 
 	polynomialZCreate()
 
-	//fmt.Println(resultVector)
 	isValid, quotient := polynomialsDevide(resultVector, qapVectorZ)
 
 	if isValid {
+		fmt.Println("Full QAP vector coefficients:\n", resultVector)
+		fmt.Println("Vanish vector (Z polynomial) coefficients:\n", qapVectorZ)
 		fmt.Println("QAP representation is correct\n")
 	} else {
-
+		fmt.Println("Full QAP vector coefficients:\n", resultVector)
+		fmt.Println("Vanish vector (Z polynomial) coefficients:\n", qapVectorZ)
 		fmt.Println("QAP representation isn`t correct\n Quotient = ")
 		fmt.Println(quotient)
 	}
@@ -794,13 +810,13 @@ func QAPVectCReturn() [][]int {
 	return qapVectorC
 }
 
-// Function for startiing calculating
-// НУЖНО ДОБАВИТЬ ОБРАБОТКУ ВХОДНЫХ ДАННЫХ, КОТОРАЯ УПРОЩАЕТ ФУНКЦИИ ТИПО Х+Х -> 2*x
+// Function for starting calculating
 func main() {
+
 	module = 11
 	//r1cs.Start("x ^ 3 + x + 5", "x = 2 y = 15")
-	//r1cs.Start("( x + z ) ^ 2 + z + 1", "x = 1 z = 2 y = 12")
-	r1cs.Start("x ^ j + h ^ k", "x = 2 j = 3 h = 3 k = 2 y = 17")
+	r1cs.Start("( x + z ) ^ 2 + z + 1", "x = 1 z = 2 y = 12")
+	//r1cs.Start("x ^ ( g ^ 2 + 1 ) + 7", "x = 2 g = 2 y = 39")
 	//r1cs.Start("x ^ ( 2 + z ) * g", "x = 2 z = 1 g = 2 y = 16")
 
 	// Allocate memory for QAP vectors
