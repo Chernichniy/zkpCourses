@@ -1,5 +1,3 @@
-// TO DO
-// Сделать проверку этих полиномов (в файле R1CS) постфиксный вид и рассчет
 package Lagrangia
 
 import (
@@ -9,24 +7,25 @@ import (
 )
 
 var inputLag string
-var mapOfRootsLag = make(map[string]int) //map корней и знчений функций
+var mapOfRootsLag = make(map[string]int) // Store coordinates (x,y) in form: key = x or y; value = coordinate value
 
-var mapOfPolynomials = make(map[string]string) //полиномы для одной точки
-var coordinates []int                          //хранит координаты
+var mapOfPolynomials = make(map[string]string) // Store interpolated polynomials for 1 point
+var coordinates []int                          // Stor coordinates in form [0]=x coord. [1]=y coord [2]=x1 coord. [3]=y1 coord ...
 
-var mapOfMultiPolynomials = make(map[string]string) //полиномы, созданные из нескольких точек
+var mapOfMultiPolynomials = make(map[string]string) // Store interpolated polynomials for multi ponts
 
-var mapOfLagrangiaBasis = make(map[int]string) //хранит базисы
+var mapOfLagrangiaBasis = make(map[int]string) // Store basises of polynomials (needed for barricentric view)
 
-var mapOfNormalNumerator = make(map[string]string)   //хранит числитель конечного обычного вида
-var mapOfNormalDenumerator = make(map[string]string) //хранит знаменатель конечного обычного вида
+var mapOfNormalNumerator = make(map[string]string)   // Store numerator of interpolated polynomials (multi points interpolation)
+var mapOfNormalDenominator = make(map[string]string) // Store denominator of interpolated polynomials (multi points interpolation)
 
-var mapOfBarricNumerator = make(map[int]string)   //хранит числитель конечного баррицентричного вида
-var mapOfBarricDenumerator = make(map[int]string) //хранит знаменатель конечного баррицентричного вида
+var mapOfBarricNumerator = make(map[int]string)   // Store numerator of interpolated polynomials for barricentric view (multi points interpolation)
+var mapOfBarricDenumerator = make(map[int]string) // Store denominator of interpolated polynomials for barricentric view (multi points interpolation)
 
 var MultiPolynomialsBarric string
 
-func rootsMapLag(roots string) { // это нужно закинуть в отдеьлный файл
+// Saves point coordinates
+func rootsMapLag(roots string) {
 	strRoots := strings.Split(roots, " ")
 
 	for i := 0; i < len(strRoots); i++ {
@@ -38,7 +37,7 @@ func rootsMapLag(roots string) { // это нужно закинуть в отд
 
 }
 
-// вытаскивает одну пару (x,y)
+// Take only one coordinate pair from coordinates map
 func xy(roots map[string]int, key string) (int, int) {
 	temp := strings.Split(key, "")
 	temp[0] = "y"
@@ -47,7 +46,7 @@ func xy(roots map[string]int, key string) (int, int) {
 	return roots[key], roots[y]
 }
 
-// сохраняет полиномы в mapOfPolynomials, созданные из одной точки
+// Saves polynomial wich interpolated from 1 point in mapOfPolynomials variable
 func savePolynomial(x int, y int, counter int) {
 	tempKey := "pol"
 	tempKey = tempKey + strconv.Itoa(counter)
@@ -57,7 +56,7 @@ func savePolynomial(x int, y int, counter int) {
 
 }
 
-// сохраняет полиномы в mapOfMultiPolynomials, созданные из нескольких точек
+// Saves polynomials wich interpolated from multi points in mapOfMultiPolynomials variable
 func saveMultPolynomial(xKeys []int, x int, y int, counter int) { //попробовать через поинтеры улучшить (тоесть уменьшить количество переменных)
 	tempKey := "pol"
 	tempKey = tempKey + strconv.Itoa(counter)
@@ -113,13 +112,13 @@ func saveMultPolynomial(xKeys []int, x int, y int, counter int) { //попроб
 	}
 
 	denum := strings.Split(tempValStr, "/")
-	mapOfNormalDenumerator[tempKey] = denum[1] + " )"
+	mapOfNormalDenominator[tempKey] = denum[1] + " )"
 	tempValStr = tempValStr + " )"
 	mapOfMultiPolynomials[tempKey] = tempValStr
 
 }
 
-// создает полиномы лишь для одной точки
+// Interpolate polynomial by one point
 func polynomialByOnePoint(roots map[string]int) {
 	fmt.Println("Polynomials by one point: \n")
 	counter := 0
@@ -141,7 +140,7 @@ func polynomialByOnePoint(roots map[string]int) {
 	fmt.Println("\n")
 }
 
-// создает полиномы из нескольких точек
+// Interpolated polynomials from multi points
 func polynomialByMultiPoints() {
 
 	arraySize := len(mapOfRootsLag) / 2
@@ -324,7 +323,7 @@ func ReturnNumeratorNormal() map[string]string {
 }
 
 func ReturnDenumeratorNormal() map[string]string {
-	return mapOfNormalDenumerator
+	return mapOfNormalDenominator
 }
 
 func ReturnPolynomialByOnePoint() map[string]string {
@@ -344,8 +343,8 @@ func ClearAllVar() {
 	for key := range mapOfNormalNumerator {
 		delete(mapOfNormalNumerator, key)
 	}
-	for key := range mapOfNormalDenumerator {
-		delete(mapOfNormalDenumerator, key)
+	for key := range mapOfNormalDenominator {
+		delete(mapOfNormalDenominator, key)
 	}
 	for key := range mapOfMultiPolynomials {
 		delete(mapOfMultiPolynomials, key)
