@@ -1,0 +1,103 @@
+html{
+    box-sizing: border-box;
+}
+*,
+*::after,
+*::before{
+    box-sizing: inherit;
+}
+
+body{
+    background-color:lavender;
+    font-family: 'Roboto Condensed', sans-serif;
+    font-size: 16px;
+
+    line-height: 120%;
+    font-weight: 400;
+    color: black;
+
+}
+
+a{
+    text-decoration: none;
+    color: inherit;
+}
+
+button{
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+ul{
+    list-style: none;
+}
+
+.container{
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 10px;
+    
+}
+
+
+
+
+.header__top{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 100px;
+}
+
+.logo{
+    width: 165px;
+    height: 68px;
+  
+   object-fit: cover;
+   
+   object-fit: contain;
+}
+
+.logo img{
+    width: 165px;
+    height: 68px;
+    transition: all .3s;
+    
+}
+
+.logo img:hover{
+    width: 169px;
+    height: 72px;
+    border-radius: 20%;
+}
+
+.list{
+    display: flex;
+
+}
+
+.list_item + .list_item{
+    margin-left: 30px;
+}
+.list_link{
+    width: 40px;
+    height: 40px;
+    font-size: medium;
+    border-radius: 30%;
+    transition: all .3s;
+    
+    
+    
+}
+
+.list_link:hover{
+    background-color: aliceblue;
+}
+
+
+
+#nav_btns{
+    display: block;
+}

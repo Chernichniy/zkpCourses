@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ua">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewpoint" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>ZKPCourse</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300&display=swap" rel="stylesheet">
+
+
+
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/slick.css">
+    <link rel="stylesheet" href="css/jquery.fancyboox.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/r1cs.css">
+</head>
+    
+<body>
+    
+<header class="header">
+    <div class="container">
+        <div class="header__top">
+           
+            <a href="main_page.html" class="logo">
+                <img class="logo_img" src="images/logo.svg" alt="logo">
+            </a>
+
+           <ul class="list">
+            <li class="list_item">
+                <li class="list_item">
+                <a class="list_link" href="r1cs.html">R1CS</a>
+                </li>
+            </li>
+
+            <li class="list_item">
+                <li class="list_item">
+                <a class="list_link" href="">Lagrangia interpolation</a>
+                </li>
+
+                <li class="list_item">
+                    <li class="list_item">
+                    <a class="list_link" href="">QAP</a>
+                    </li>
+           </ul>
+
+            
+        </div>
+
+    </div>
+</header>
+
+<div class="container">
+    <div class="interactive_zone">
+
+        <div class="text_with_interactiveArea">
+            <textarea name="infoFor" id="" cols="30" rows="10">
+                asdasdsa
+                asdadasdad
+                sdadasdad
+                asdadsadasd
+                asdsadad
+
+            </textarea>
+
+            <div class="interactive_area">
+            
+            
+
+
+
+                <li class="input_items">
+                    <p>Try your function!</p>
+                </li>
+        
+                <li class="input_items">
+                    <label for="funciton_input_label">
+                        <input type="text" id="input_func">
+                        Enter function
+                    </label>
+                </li>
+        
+                <li class="input_items">
+                    <label for="roots_input_label">
+                        <input type="text" id="input_roots">
+                        Enter roots
+                    </label>
+                </li>
+        
+                <li class="input_items">
+                    <button id="btn_calc" onclick="getDataAndCalc()">Calculate!</button>
+                </li>
+        
+                
+            </div>
+        </div>
+        
+    
+    
+        <div class="result">
+                <p id="witnessFormal_header">Witness in formal representation</p>
+            <p class="result_data" id ="witnessFormal"></p>
+                <p id="witnessNumber_header">Witness in number representation</p>
+            <p class="result_data" id ="witnessNumber"></p>
+    
+            <p id="witnessFormal_header">Check witness in formal form</p>
+                <p class="result_data" id ="witnessFormalChecker"></p>
+            <p id="witnessNumber_header">Check witness in number form</p>
+                <p class="result_data" id ="witnessNumberChecker"></p>
+    
+            <div class="container_results">
+    
+                <div class="resulted_data">
+                    <p id="matrices_id">Matrix A</p>
+                    <ul class="result_data" id ="matrixA"></ul>
+                </div>
+    
+                <div class="resulted_data"> 
+                    <p id="matrices_id">Matrix B</p>
+                    <ul class="result_data" id ="matrixB"></ul>
+                </div>
+        
+                <div class="resulted_data"> 
+                    <p id="matrices_id">Matrix C</p>
+                    <ul class="result_data" id ="matrixC"></ul>
+                </div>
+
+                
+    
+            </div>
+           
+        </div>
+    
+    </div>
+
+</div>
+
+
+
+    
+
+    
+    
+
+
+
+
+<script>
+
+    window.onload=calculate() // Send GET request with deffault param on page loading phase
+
+    // -> Here starts code which listening if you click Enter key when stay in <input> form
+    const input_func = document.getElementById('input_func');
+    const input_roots = document.getElementById('input_roots');
+
+    const searchButton = document.getElementById('btn_calc');
+
+    input_func.addEventListener('keyup', function(event) {
+        if (event.keyCode === 13) {
+          // simulate a button click to trigger the search
+          searchButton.click();
+        }
+    });
+
+    input_roots.addEventListener('keyup', function(event) {
+        if (event.keyCode === 13) {
+          // simulate a button click to trigger the search
+          searchButton.click();
+        }
+    });
+    // <- Here this code are finished.
+
+    //Take data from <input> and call API calculations
+    function getDataAndCalc(){
+        // Clear old data
+        clearOldMatrixData();
+
+        const input_func = document.getElementById('input_func');
+        const input_roots = document.getElementById('input_roots');
+        
+        const unformattedFuncForCalc = input_func.value;
+        const unformattedRootsForCalc = input_roots.value;
+
+        const funcForCalc = formatInputFunctionString(unformattedFuncForCalc);
+        const rootsForCalc = formatInputRootsString(unformattedRootsForCalc);
+        
+        calculate(funcForCalc, rootsForCalc);
+               
+    }
+
+    //Clear all <li> with matrices data
+    function clearOldMatrixData(){
+        var resultsListMatrixA = document.getElementById('matrixA');
+        var resultsListMatrixB = document.getElementById('matrixB');
+        var resultsListMatrixC = document.getElementById('matrixC');
+        resultsListMatrixA.innerHTML = '';
+        resultsListMatrixB.innerHTML = '';
+        resultsListMatrixC.innerHTML = '';
+    }
+
+    // GET calculated values from API
+    function calculate(functionForEval, roots ){
+
+        console.log(functionForEval);
+        console.log(roots);
+
+
+        if (functionForEval == undefined){
+            var url = 'http://localhost:8080/r1cs/x ^ 3 + x + 5/x = 2 y = 15';
+        } else{
+            var url = 'http://localhost:8080/r1cs/' +  functionForEval+ '/' + roots;
+        }
+   
+        
+
+        fetch(url)
+        .then(resopnse => resopnse.json())
+        .then(data => {
+        
+        console.log(data);
+    
+        document.querySelector('#witnessFormal').innerText = "[" + data.WitnessFormalForm + "]";
+        document.querySelector('#witnessNumber').innerText = "[" + data.WitnessNumberForm + "]";
+
+        document.querySelector('#witnessFormalChecker').innerText = "[" + data.WitnessFormalChecker + "]";
+        document.querySelector('#witnessNumberChecker').innerText = "[" + data.WitnessNumberChecker + "]";
+    
+        for (let i=0; i<data.MatrixA.length; i++){
+            const markup = `<li class ="array_rows">[${data.MatrixA[i]}]</li>`
+    
+            document.querySelector('#matrixA').insertAdjacentHTML('beforeend', markup)
+        }
+    
+        for (let i=0; i<data.MatrixB.length; i++){
+            const markup = `<li class ="array_rows">[${data.MatrixB[i]}]</li>`
+    
+            document.querySelector('#matrixB').insertAdjacentHTML('beforeend', markup)
+        }
+    
+        for (let i=0; i<data.MatrixC.length; i++){
+            const markup = `<li class ="array_rows">[${data.MatrixC[i]}]</li>`
+    
+            document.querySelector('#matrixC').insertAdjacentHTML('beforeend', markup)
+        }
+        
+        })
+        .catch (error => console.log(error));
+    }
+   
+    // Formatted string with roots to "x = 2 z = 3 t = 4 y = 2" view
+    function formatInputRootsString(roots) {
+        // Replace "x=2" to " x=2 "
+        const formattedString = roots.replace(/(\w+=\d+)/g, '$1 ');
+      
+        // Replace "=" to " = "
+        var correctRoots = formattedString.replace(/\s*=\s*/g, ' = ');
+      
+        correctRoots = removeDoubleSpaces(correctRoots);
+        return correctRoots;
+    }
+
+    function formatInputFunctionString(func) {
+        // Add spacese around  "^", "(", ")", "+", "-", "/"
+        const formattedString = func.replace(/(\^|\(|\)|\+|\-|\/)/g, (match) => {
+          if (match === '^' || match === '(' || match === ')' || match === '+' || match === '-' || match === '/' || match ==='*') {
+            return ` ${match} `;
+          } else {
+            return match;
+          }
+        });
+      
+        // Deleting unnded spaces
+        var correctFunc = formattedString.trim().replace(/\s+/g, ' ');
+
+        correctFunc = removeDoubleSpaces(correctFunc)
+      
+        return correctFunc;
+      }
+
+    // Delete double spaces between caracters
+    function removeDoubleSpaces(string) {
+        
+        const cleanedString = string.replace(/\s{2,}/g, ' ');
+      
+        return cleanedString;
+    }
+  
+</script>
+
+</body>

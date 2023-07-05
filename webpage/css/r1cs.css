@@ -1,0 +1,150 @@
+
+li{
+    list-style: none;
+    
+
+}
+
+p{
+    text-align:left;
+    font-size: small;
+}
+
+#witnessFormal{
+    margin-left: 10px;
+}
+
+#witnessNumber{
+    margin-left: 10px;
+}
+
+#witnessFormal_header{
+    margin-left: 10px;
+}
+
+#witnessNumber_header{
+    margin-left: 10px;
+}
+
+#witnessFormalChecker{
+    margin-left: 10px;
+}
+
+#witnessNumberChecker{
+    margin-left: 10px;
+}
+
+#matrices_id{
+    
+    text-align: center;
+    margin-left: 30px;
+}
+
+.test{
+    display: flex;
+    
+    text-align: center;
+}
+
+
+.interactive_zone{
+    background-color: lavender;
+    display: flex;
+    justify-content:center;
+    
+
+}
+
+.input_items{
+    display: flex;
+    width:auto;
+    margin-right: 10px;
+    margin-left: 10px;
+    align-items: center;
+}
+.text_with_interactiveArea{
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+
+}
+
+
+.interactive_area{
+    background-color:rgb(216, 216, 243);
+    border-style: double;
+    width: 300px;
+    height: 200px;
+    
+
+
+    min-width: 200px;
+    min-height: 150px;
+    overflow: auto;
+    resize: both;
+}
+
+.interactive_area.both{
+    resize: both;
+    background: rgb(216, 216, 243);
+}
+
+
+.result{
+    background-color: #040909;
+    padding: 1em;
+    align-content: center;
+    font-size: small;
+    
+    border-style: dashed;
+
+    color: aliceblue;
+
+    width: 760px;
+    height: 600px;
+    overflow: auto;
+    resize: both;
+    
+    
+}
+
+
+.result.both{
+    resize: both;
+    background: #040909;
+}
+
+.labels{
+    align-content: space-between;
+}
+
+
+.container_results{
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction:row;
+    
+    
+    margin-top: 10px;
+
+}
+
+
+.result_data{
+    font-family: 'Roboto Condensed', sans-serif;
+    font-size:small;
+    letter-spacing: 1px;
+    
+    
+}
+
+.array_rows{
+    list-style: none;
+    font-size: small;
+    max-width: fit-content;
+    letter-spacing: 1px;
+
+    
+    
+}
+
