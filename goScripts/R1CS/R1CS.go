@@ -1,14 +1,18 @@
+// This package calculate R1CS matricies for input (string) function and roots of function
+// Input string have to being in form, where first variable without space before and last variable without space after
+// ohers variables and operators need to put before and after spaces
+// Example: wrong input - " x+3^x+7"; correct input - "x + 3 ^ x + 7" or "( 3 + x ) ^ ( h + 2 )"
+
+// Output of this package is R1CS matricies for left, right inputs and output; witness in numbers and formal forms
+// Matricies in form of [][]int slice; witness in form of []int or []string slices (number and formal form)
+
 package r1cs
 
 import (
 	"fmt"
-	"html/template"
-	"net/http"
 	"strconv"
 	"strings"
 )
-
-var tpl *template.Template
 
 var input string
 var roots_input string
@@ -587,13 +591,40 @@ func ReturnWitnessNumbers() []int {
 	return witnes
 }
 
-func Start(function string, roots string) {
-	main(function, roots)
+func ReturnWitnessFormalChecker() []string {
+	return witnesFormalChecker
 }
 
-func main(function string, roots string) {
+func ReturnWitnessNumberChecker() []string {
+	return witnesChecker
+}
+
+func ClearAllVar() {
+	for key := range mapOfRoots {
+		delete(mapOfRoots, key)
+	}
+
+	input = ""
+	roots_input = ""
+	evaluationInput = ""
+	constraints = nil
+	constraintsFormall = nil
+	witnes = nil
+	witnesFormal = nil
+	witnesChecker = nil
+	witnesFormalChecker = nil
+
+	vectorsA = nil
+	vectorsB = nil
+	vectorsC = nil
+}
+
+func Start(function string, roots string) {
 	input = function
 	roots_input = roots
+
+	//input = "x ^ 3 + x + 5"
+	//roots_input = "x = 2 y = 15"
 
 	rootsMap(roots_input)
 	evalInput(input, false)
@@ -630,12 +661,4 @@ func main(function string, roots string) {
 	fmt.Println("Checker of satisfaction of R1CS conditions wich calculate by R1CS matrices (numbers representation): ")
 	fmt.Println(witnesChecker)
 
-	tpl, _ = tpl.ParseGlob("R1CS/*.html")
-	http.HandleFunc("/r1cs", r1csHandler)
-	http.ListenAndServe(":8181", nil)
-
-}
-
-func r1csHandler(w http.ResponseWriter, r *http.Request) {
-	tpl.ExecuteTemplate(w, "r1cs.html", vectorsA)
 }

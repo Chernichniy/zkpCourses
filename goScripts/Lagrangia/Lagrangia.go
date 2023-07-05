@@ -1,3 +1,7 @@
+// This package doesn`t calculate polynomial. It only interpolate in formal view.
+// For calculating this polynomial we need to transform infix view to postfix and then calculate.
+// How calculation works, you can check in QAP implementation.
+
 package Lagrangia
 
 import (
@@ -22,7 +26,7 @@ var mapOfNormalDenominator = make(map[string]string) // Store denominator of int
 var mapOfBarricNumerator = make(map[int]string)   // Store numerator of interpolated polynomials for barricentric view (multi points interpolation)
 var mapOfBarricDenumerator = make(map[int]string) // Store denominator of interpolated polynomials for barricentric view (multi points interpolation)
 
-var MultiPolynomialsBarric string
+var multiPolynomialsBarric string
 
 // Saves point coordinates
 func rootsMapLag(roots string) {
@@ -31,7 +35,7 @@ func rootsMapLag(roots string) {
 	for i := 0; i < len(strRoots); i++ {
 		if strRoots[i] == "=" {
 			var temp, _ = strconv.Atoi(strRoots[i+1])
-			mapOfRootsLag[strRoots[i-1]] = temp //помещает корни в key=value форму
+			mapOfRootsLag[strRoots[i-1]] = temp
 		}
 	}
 
@@ -70,7 +74,7 @@ func saveMultPolynomial(xKeys []int, x int, y int, counter int) { //попроб
 
 	tempValStr := "( " + strconv.Itoa(y) + " * "
 
-	for j := 0; j < len(xKeys)-1; j++ {
+	for j := 0; j < len(xKeys)-1; j++ { // Numerator part
 		for i := 0; i < len(keysForNumerator); i++ {
 			if x == keysForNumerator[i] {
 				keysForNumerator = append(keysForNumerator[:i], keysForNumerator[i+1:]...)
@@ -93,7 +97,7 @@ func saveMultPolynomial(xKeys []int, x int, y int, counter int) { //попроб
 	tempValStr = tempValStr + " )" + " / ( "
 	tempVal = "( " + strconv.Itoa(x) + " - "
 
-	for j := 0; j < len(xKeys)-1; j++ {
+	for j := 0; j < len(xKeys)-1; j++ { // Denominator part
 		for i := 0; i < len(keysForDenominator); i++ {
 			if x == keysForDenominator[i] {
 				keysForDenominator = append(keysForDenominator[:i], keysForDenominator[i+1:]...)
@@ -172,8 +176,8 @@ func polynomialByMultiPoints() {
 
 }
 
-// Создает следующий по счету key. Генерирует соответсвующую key значение y для key значения x. Получается пара значений (xCOUNTER,yCOUNTER)
-// Так же используется в генерации соответсвующего yCOUNTER для key значения map, что бы пропустить значения key=yCOUNTER
+// Create a string wich point to coordinate index. Needed for well coordinates mapping
+// Input: "x22". Output: "y22"
 func keyGenerate(key string, counter int) (keyNew string) {
 	temp := strings.Split(key, "")
 	temp[0] = "y"
@@ -181,7 +185,7 @@ func keyGenerate(key string, counter int) (keyNew string) {
 	return keyNew
 }
 
-// считает базис Лагранжа и сохраняет его в
+// Calculate Lagrangia basis and save it.
 func basisCalc(xKeys []int, x int, y int, counter int) {
 
 	keysForNumerator := make([]int, len(xKeys))
@@ -192,7 +196,7 @@ func basisCalc(xKeys []int, x int, y int, counter int) {
 	tempValStr := "1 / ( "
 	tempVal := "( " + strconv.Itoa(x) + " - "
 
-	for j := 0; j < len(xKeys)-1; j++ {
+	for j := 0; j < len(xKeys)-1; j++ { // Denominator part
 		for i := 0; i < len(keysForDenominator); i++ {
 			if x == keysForDenominator[i] {
 				keysForDenominator = append(keysForDenominator[:i], keysForDenominator[i+1:]...)
@@ -216,7 +220,7 @@ func basisCalc(xKeys []int, x int, y int, counter int) {
 
 	tempValStr = ""
 
-	for j := 0; j < len(xKeys)-1; j++ {
+	for j := 0; j < len(xKeys)-1; j++ { // Numerator part
 		for i := 0; i < len(keysForNumerator); i++ {
 			if x == keysForNumerator[i] {
 				keysForNumerator = append(keysForNumerator[:i], keysForNumerator[i+1:]...)
@@ -240,7 +244,7 @@ func basisCalc(xKeys []int, x int, y int, counter int) {
 
 }
 
-// умножение базиса на значение функции
+// Multiply Lagrangia basis on corresponding "y" coordinate
 func numeratorBarricentricCals(map[int]string) map[int]string { //DELETE
 	//var str []string
 	var basisPlusFunc = make(map[int]string)
@@ -253,7 +257,7 @@ func numeratorBarricentricCals(map[int]string) map[int]string { //DELETE
 	return basisPlusFunc
 }
 
-// Возвращает интерполяционный полином Лагранжа в баррицентрическом виде
+// Create Lagrangia interpolate polynomial in barricentric view
 func resultBarricentricForm() string {
 
 	fmt.Println("Polynomial by multi points (barricentric view):\n")
@@ -278,11 +282,12 @@ func resultBarricentricForm() string {
 		}
 		counter++
 	}
-	MultiPolynomialsBarric = "( " + tempNumerator + " ) / ( " + tempDenumerator + " )"
-	return MultiPolynomialsBarric
+	multiPolynomialsBarric = "( " + tempNumerator + " ) / ( " + tempDenumerator + " )"
+	return multiPolynomialsBarric
 }
 
-// выводит полиномы в виде суммы полиномов(обычный вид), но не считает их
+// Print interpolated polynomial in sum form of each polnomial
+// Example: output: pol1 + pol2 + pol3...
 func resultNormalForm() {
 	var strTempResult []string
 	fmt.Println("Polynomial by multi points:\n")
@@ -296,7 +301,7 @@ func resultNormalForm() {
 	fmt.Println(strResult + "\n")
 }
 
-// Выводит базисы Лагранжа для каждой точки
+// Print Lagrangia basises for each interpolated poplynomails
 func printLagrangiaBasis() {
 	fmt.Println("\nLagrangia`s basisis")
 	var temp []string
@@ -307,15 +312,17 @@ func printLagrangiaBasis() {
 		temp = append(temp, value)
 	}
 	fmt.Println("\n")
+
 }
 
+// Return some variables for others packages
 func ReturnMultiPolynomial() map[string]string {
 	return mapOfMultiPolynomials
 }
 
 func ReturnMultiPolynomialBarric() string {
 
-	return MultiPolynomialsBarric
+	return multiPolynomialsBarric
 }
 
 func ReturnNumeratorNormal() map[string]string {
@@ -330,6 +337,11 @@ func ReturnPolynomialByOnePoint() map[string]string {
 	return mapOfPolynomials
 }
 
+func ReturnBaricBasis() map[int]string {
+	return mapOfLagrangiaBasis
+}
+
+// Clear all variables
 func ClearAllVar() {
 	for key := range mapOfBarricDenumerator {
 		delete(mapOfBarricDenumerator, key)
@@ -357,10 +369,11 @@ func ClearAllVar() {
 	}
 
 	inputLag = ""
-	MultiPolynomialsBarric = ""
-	coordinates = coordinates[:0]
+	multiPolynomialsBarric = ""
+	coordinates = nil
 }
 
+// Starting function
 func Start(input string) {
 	inputLag = input
 

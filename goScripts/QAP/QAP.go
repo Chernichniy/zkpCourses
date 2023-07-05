@@ -1,4 +1,7 @@
-package main
+// This package calculate QAP polynomial for input function. Input function in form like R1CS package.
+// Don't forget about module!
+
+package qap
 
 import (
 	"fmt"
@@ -15,10 +18,13 @@ var module int
 var qapVectorA [][]int
 var qapVectorB [][]int
 var qapVectorC [][]int
+var qapVectorFinall []int
 var qapVectorZ []int
 var qapVectorTemp [][]int
+var quotientOfFruct []int
 
 var indexOfRow int = 0
+var isQAPCorrect bool
 
 // Check if variable float64 is int variable
 // Example: isInt(2,0) == true; isInt(2,1)==false
@@ -239,7 +245,7 @@ func leftAndRightOfOneValueInputAppend(input []string) ([]string, int) {
 			for j := 0; j < i; j++ {
 				tempValLeftSide = append(tempValLeftSide, input[j])
 			}
-			leftInputStr := strings.Join(tempValLeftSide, "") //ТУТ
+			leftInputStr := strings.Join(tempValLeftSide, "")
 			input[i-1] = leftInputStr
 			input = append(input[:0], input[i-1:]...)
 			i = -1
@@ -249,7 +255,7 @@ func leftAndRightOfOneValueInputAppend(input []string) ([]string, int) {
 			for j := i + 1; j < len(input); j++ {
 				tempValRightSide = append(tempValRightSide, input[j])
 			}
-			leftInputStr := strings.Join(tempValRightSide, "") //ТУТ
+			leftInputStr := strings.Join(tempValRightSide, "")
 			input[i+1] = leftInputStr
 			input = append(input[:i+2], input[len(input):]...)
 
@@ -771,6 +777,7 @@ func fullQAPPolynomialCalc() {
 	vectorAMultB := qapVectorsMult(vectorA, vectorB)
 
 	resultVector := make([]int, len(vectorAMultB))
+	qapVectorFinall = make([]int, len(resultVector)) // Save variable
 
 	for i := 0; i < len(vectorA); i++ {
 		resultVector[i] = numberByModule(vectorAMultB[i] - vectorC[i])
@@ -780,9 +787,11 @@ func fullQAPPolynomialCalc() {
 		resultVector[i] = vectorAMultB[i]
 	}
 
+	copy(qapVectorFinall, resultVector)
 	polynomialZCreate()
 
 	isValid, quotient := polynomialsDevide(resultVector, qapVectorZ)
+	isQAPCorrect = isValid
 
 	if isValid {
 		fmt.Println("Full QAP vector coefficients:\n", resultVector)
@@ -793,6 +802,8 @@ func fullQAPPolynomialCalc() {
 		fmt.Println("Vanish vector (Z polynomial) coefficients:\n", qapVectorZ)
 		fmt.Println("QAP representation isn`t correct\n Quotient = ")
 		fmt.Println(quotient)
+		quotientOfFruct = make([]int, len(quotient))
+		copy(quotientOfFruct, quotient) // Saving quotient
 	}
 
 }
@@ -810,12 +821,59 @@ func QAPVectCReturn() [][]int {
 	return qapVectorC
 }
 
-// Function for starting calculating
-func main() {
+func QAPVectFinallReturn() []int {
+	return qapVectorFinall
+}
 
-	module = 11
+func QAPQuiotientOfFinallFructReturn() []int {
+	return quotientOfFruct
+}
+
+func QAPVanishVectorReturn() []int {
+	return qapVectorZ
+}
+
+func QAPCorrectCalcOrNot() bool {
+	return isQAPCorrect
+}
+
+func ClearAllVar() {
+	qapVectorA = nil
+	qapVectorB = nil
+	qapVectorC = nil
+	qapVectorZ = nil
+
+	qapVectorFinall = nil
+	qapVectorTemp = nil
+	quotientOfFruct = nil
+
+	indexOfRow = 0
+	isQAPCorrect = false
+
+	Lagrangia.ClearAllVar()
+	r1cs.ClearAllVar()
+}
+
+/*
+func main() {
+	Start()
+	ClearAllVar()
+	Start()
+	Start()
+}
+*/
+
+// Function for starting calculating
+func Start(function string, roots string, mod int) {
+
+	//Lagrangia.ClearAllVar()
+	//r1cs.ClearAllVar()
+
+	//module = 11
 	//r1cs.Start("x ^ 3 + x + 5", "x = 2 y = 15")
-	r1cs.Start("( x + z ) ^ 2 + z + 1", "x = 1 z = 2 y = 12")
+	module = mod
+	r1cs.Start(function, roots)
+	//r1cs.Start("( x + z ) ^ 2 + z + 1", "x = 1 z = 2 y = 12")
 	//r1cs.Start("x ^ ( g ^ 2 + 1 ) + 7", "x = 2 g = 2 y = 39")
 	//r1cs.Start("x ^ ( 2 + z ) * g", "x = 2 z = 1 g = 2 y = 16")
 
