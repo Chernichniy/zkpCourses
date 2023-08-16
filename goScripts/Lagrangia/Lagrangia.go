@@ -168,7 +168,7 @@ func polynomialByMultiPoints() {
 		}
 
 		saveMultPolynomial(keys, value, mapOfRootsLag[y], counter2)
-		basisCalc(keys, value, mapOfRootsLag[y], counter2)
+		//basisCalc(keys, value, mapOfRootsLag[y], counter2)
 
 		counter2++
 
@@ -384,10 +384,10 @@ func Start(input string) {
 	//fmt.Println(mapOfMultiPolynomials)
 
 	//numeratorBarricentricCals(mapOfLagrangiaBasis)
-	resultNormalForm()
+	//resultNormalForm()
 
 	//fmt.Println(mapOfLagrangiaBasis)
-	printLagrangiaBasis()
-	fmt.Println(resultBarricentricForm())
+	//printLagrangiaBasis()
+	//fmt.Println(resultBarricentricForm())
 	//resultNormalForm()
 }
